@@ -30,15 +30,22 @@ if (provider === 'postgres') {
     console.error("FATAL: PGlite cannot be used in production.");
     process.exit(1);
   }
+} else {
+  console.error(`FATAL: Invalid DATABASE_PROVIDER '${provider}'. Use 'postgres' or 'pglite'.`);
+  process.exit(1);
+}
+
+async function getPgliteDb() {
+  if (pgliteDb) return pgliteDb;
+  
   const dataDir = path.join(process.cwd(), 'data', 'pglite');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-  const { PGlite } = require('@electric-sql/pglite');
+  
+  const { PGlite } = await import('@electric-sql/pglite');
   pgliteDb = new PGlite(dataDir);
-} else {
-  console.error(`FATAL: Invalid DATABASE_PROVIDER '${provider}'. Use 'postgres' or 'pglite'.`);
-  process.exit(1);
+  return pgliteDb;
 }
 
 let isInitialized = false;
@@ -53,8 +60,9 @@ export async function initDatabase() {
       
       if (pgPool) {
         await pgPool.query(schemaSql);
-      } else if (pgliteDb) {
-        await pgliteDb.exec(schemaSql);
+      } else if (provider === 'pglite') {
+        const db = await getPgliteDb();
+        await db.exec(schemaSql);
       }
       
       console.log(`PostgreSQL schema initialized successfully via ${provider}.`);
@@ -71,8 +79,9 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> 
   if (pgPool) {
     const res = await pgPool.query<T>(sql, params);
     return res.rows;
-  } else if (pgliteDb) {
-    const res = await pgliteDb.query<T>(sql, params);
+  } else if (provider === 'pglite') {
+    const db = await getPgliteDb();
+    const res = await db.query<T>(sql, params);
     return res.rows;
   }
   return [];
@@ -87,8 +96,9 @@ export async function exec(sql: string) {
   await initDatabase();
   if (pgPool) {
     return await pgPool.query(sql);
-  } else if (pgliteDb) {
-    return await pgliteDb.exec(sql);
+  } else if (provider === 'pglite') {
+    const db = await getPgliteDb();
+    return await db.exec(sql);
   }
 }
 
@@ -123,22 +133,23 @@ export async function beginTransaction(): Promise<TransactionClient> {
         try { await client.query('ROLLBACK'); } finally { client.release(); }
       }
     };
-  } else if (pgliteDb) {
-    await pgliteDb.query('BEGIN');
+  } else if (provider === 'pglite') {
+    const db = await getPgliteDb();
+    await db.query('BEGIN');
     return {
       query: async <T = any>(sql: string, params?: any[]) => {
-        const res = await pgliteDb!.query<T>(sql, params);
+        const res = await db.query<T>(sql, params);
         return res.rows;
       },
       queryOne: async <T = any>(sql: string, params?: any[]) => {
-        const res = await pgliteDb!.query<T>(sql, params);
+        const res = await db.query<T>(sql, params);
         return res.rows.length > 0 ? res.rows[0] : null;
       },
       commit: async () => {
-        await pgliteDb!.query('COMMIT');
+        await db.query('COMMIT');
       },
       rollback: async () => {
-        await pgliteDb!.query('ROLLBACK');
+        await db.query('ROLLBACK');
       }
     };
   }

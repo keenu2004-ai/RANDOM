@@ -10,7 +10,7 @@ dashboardStatsRouter.get('/dashboard/stats', authenticateToken, async (req: Auth
   const empId = req.user!.employeeId;
   const orgId = req.user!.organizationId;
 
-  if (!empId && role !== 'SUPER_ADMIN') {
+  if (!empId && role !== 'SUPER_ADMIN' && role !== 'ADMIN') {
     return res.status(400).json({ error: 'Employee ID not found' });
   }
 

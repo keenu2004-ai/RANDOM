@@ -101,4 +101,10 @@ async function seed() {
   }
 }
 
-seed();
+// Only execute seed if run directly via tsx/node, not when imported
+const isMain = typeof require !== 'undefined' && require.main === module;
+const isTsx = process.argv[1] && process.argv[1].endsWith('seed.ts');
+
+if (isMain || isTsx) {
+  seed();
+}

@@ -10,7 +10,7 @@ import cors from 'cors';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { apiRouter } from './src/server/api';
-import { initDatabase, runSeed } from './src/server/db/index.js';
+import { initDatabase } from './src/server/db/index.js';
 import { notificationService } from './src/server/services/notification.service.js';
 import { requestIdMiddleware, errorHandler, notFoundHandler } from './src/server/middleware/error-handler.middleware';
 import rateLimit from 'express-rate-limit';

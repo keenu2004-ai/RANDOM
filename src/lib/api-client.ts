@@ -33,7 +33,12 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`/api${endpoint}`, {
+  // Use VITE_API_URL from environment variables for absolute URLs in production/development,
+  // falling back to relative paths for local development if not set.
+  const baseUrl = import.meta.env.VITE_API_URL || '/api';
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });

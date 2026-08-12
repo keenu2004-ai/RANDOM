@@ -1,10 +1,9 @@
 import { Pool } from 'pg';
-import { PGlite } from '@electric-sql/pglite';
 import fs from 'fs';
 import path from 'path';
 
 let pgPool: Pool | null = null;
-let pgliteDb: PGlite | null = null;
+let pgliteDb: any = null; // using any to avoid static requirement
 
 const provider = process.env.DATABASE_PROVIDER || 'pglite';
 const isProd = process.env.NODE_ENV === 'production';
@@ -27,10 +26,15 @@ if (provider === 'postgres') {
     connectionTimeoutMillis: 2000,
   });
 } else if (provider === 'pglite') {
+  if (isProd) {
+    console.error("FATAL: PGlite cannot be used in production.");
+    process.exit(1);
+  }
   const dataDir = path.join(process.cwd(), 'data', 'pglite');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
+  const { PGlite } = require('@electric-sql/pglite');
   pgliteDb = new PGlite(dataDir);
 } else {
   console.error(`FATAL: Invalid DATABASE_PROVIDER '${provider}'. Use 'postgres' or 'pglite'.`);

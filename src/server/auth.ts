@@ -7,18 +7,14 @@ import jwt from 'jsonwebtoken';
 import { Role, User, Employee } from '../types/hrms';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const isProdEnv = process.env.NODE_ENV === 'production';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
 
 if (!JWT_SECRET) {
-  if (isProdEnv) {
-    console.error('FATAL: JWT_SECRET environment variable is required in production. Shutting down.');
-    process.exit(1);
-  } else {
-    console.warn('[AUTH] WARNING: JWT_SECRET is not set. Using a volatile development key. DO NOT use in production.');
-  }
+  console.error('FATAL: JWT_SECRET environment variable is required. Shutting down.');
+  process.exit(1);
 }
-// Never expose this key; it is derived from the env var only
-const JWT_SECRET_KEY = JWT_SECRET || 'dev-only-volatile-key-do-not-use-in-production';
+
+const JWT_SECRET_KEY = JWT_SECRET;
 
 export interface AuthPayload {
   userId: string;

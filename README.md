@@ -1,20 +1,52 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+  <h1>THEIAKSHI ENTERPRISE HRMS</h1>
+  <p>Production-ready modern Human Resource Management System</p>
 </div>
 
-# Run and deploy your AI Studio app
+## Architecture
 
-This contains everything you need to run your app locally.
+This application employs a modern distributed deployment architecture:
 
-View your app in AI Studio: https://ai.studio/apps/3a749d6a-8285-4813-8d50-d9d577b6fe6f
+- **Frontend**: Hosted on [Vercel](https://vercel.com) (React + Vite)
+- **Backend**: Hosted on [Railway](https://railway.app) (Express API Server)
+- **Database**: Hosted on [Neon](https://neon.tech) (PostgreSQL)
 
-## Run Locally
+```
+                    ┌───────────────┐
+                    │    GitHub     │
+                    │ Source Code   │
+                    └───────┬───────┘
+                            │
+                 ┌──────────┴──────────┐
+                 │                     │
+                 ▼                     ▼
+        ┌────────────────┐    ┌────────────────┐
+        │    VERCEL      │    │    RAILWAY     │
+        │ React/Vite     │───►│ Express API    │
+        │ Frontend       │HTTPS│ Backend        │
+        └────────────────┘    └───────┬────────┘
+                                      │
+                                      │ DATABASE_URL
+                                      ▼
+                              ┌────────────────┐
+                              │      NEON      │
+                              │ PostgreSQL     │
+                              │ Production DB  │
+                              └────────────────┘
+```
 
-**Prerequisites:**  Node.js
+## Features
+- Strict Role-Based Access Control (RBAC)
+- Multi-Tenant Organizational Data Isolation
+- Attendance Tracking (GPS + Geofencing ready)
+- Leave & Payroll Management
+- Helpdesk & Document Vault
 
+## Deployment
+Please see [DEPLOYMENT.md](DEPLOYMENT.md) for step-by-step instructions on setting up Vercel, Railway, and Neon.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Local Development
+1. Clone the repository.
+2. Run `npm install`.
+3. Copy `.env.example` to `.env` and fill in local details (can use local PGlite for rapid dev).
+4. Run `npm run dev` to start both frontend and backend concurrently.

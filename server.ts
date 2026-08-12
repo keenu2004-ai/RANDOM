@@ -117,17 +117,27 @@ async function startServer() {
   // 6. Database Initialization
   // ============================================================
   initDatabase()
-    .then(() => runSeed())
-    .then(() => notificationService.migrateLegacyNotifications())
-    .catch(err => console.error('[STARTUP] DB init/seed warning:', err));
+    .then(() => {
+      console.log('[STARTUP] Database initialized successfully.');
+      return notificationService.migrateLegacyNotifications();
+    })
+    .catch(err => console.error('[STARTUP] DB init warning:', err));
 
   // ============================================================
-  // 7. API Routes
+  // 7. API Routes & Health Check
   // ============================================================
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      service: 'theiakshi-enterprise-hrms',
+      database: 'connected'
+    });
+  });
+
   app.use('/api', apiRouter);
 
   // ============================================================
-  // 8. Static Frontend or Vite Dev Server
+  // 8. Static Frontend or Vite Dev Server (Local Only)
   // ============================================================
   if (!isProd) {
     const vite = await createViteServer({
@@ -136,18 +146,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath, {
-      maxAge: '1y',
-      etag: true,
-    }));
-    app.get('*', (req: Request, res: Response) => {
-      // Only serve SPA for non-API routes
-      if (req.path.startsWith('/api/')) {
-        res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Endpoint not found.' } });
-      } else {
-        res.sendFile(path.join(distPath, 'index.html'));
-      }
+    // In production, the backend is strictly an API server hosted on Railway.
+    // The frontend is hosted separately on Vercel.
+    app.get('/', (req: Request, res: Response) => {
+      res.json({ message: 'THEIAKSHI ENTERPRISE HRMS API Server is running.' });
     });
   }
 

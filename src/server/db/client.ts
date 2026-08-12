@@ -81,7 +81,7 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> 
     return res.rows;
   } else if (provider === 'pglite') {
     const db = await getPgliteDb();
-    const res = await db.query<T>(sql, params);
+    const res = await db.query(sql, params) as any;
     return res.rows;
   }
   return [];
@@ -138,11 +138,11 @@ export async function beginTransaction(): Promise<TransactionClient> {
     await db.query('BEGIN');
     return {
       query: async <T = any>(sql: string, params?: any[]) => {
-        const res = await db.query<T>(sql, params);
+        const res = await db.query(sql, params) as any;
         return res.rows;
       },
       queryOne: async <T = any>(sql: string, params?: any[]) => {
-        const res = await db.query<T>(sql, params);
+        const res = await db.query(sql, params) as any;
         return res.rows.length > 0 ? res.rows[0] : null;
       },
       commit: async () => {

@@ -205,9 +205,11 @@ export class ReportRepository {
 
   async getUsers(orgId: string) {
     const res = await query(`
-      SELECT u.*, e.first_name, e.last_name, e.employee_code
+      SELECT u.*, e.first_name, e.last_name, e.employee_code, r.name as role, e.id as employee_id
       FROM users u
-      LEFT JOIN employees e ON u.employee_id = e.id
+      LEFT JOIN employees e ON e.user_id = u.id
+      LEFT JOIN user_roles ur ON u.id = ur.user_id 
+      LEFT JOIN roles r ON ur.role_id = r.id
       WHERE u.organization_id = $1
       ORDER BY u.created_at DESC
     `, [orgId]);
@@ -224,7 +226,14 @@ export class ReportRepository {
   }
 
   async getUserById(orgId: string, userId: string) {
-    const r = await queryOne(`SELECT * FROM users WHERE id = $1 AND organization_id = $2`, [userId, orgId]);
+    const r = await queryOne(`
+      SELECT u.*, r.name as role, e.id as employee_id
+      FROM users u
+      LEFT JOIN employees e ON e.user_id = u.id
+      LEFT JOIN user_roles ur ON u.id = ur.user_id 
+      LEFT JOIN roles r ON ur.role_id = r.id
+      WHERE u.id = $1 AND u.organization_id = $2
+    `, [userId, orgId]);
     if (!r) return null;
     return {
       id: r.id,

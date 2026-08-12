@@ -29,7 +29,12 @@ export class UserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const row = await queryOne<UserRow>(
-      `SELECT * FROM users WHERE email = $1`,
+      `SELECT u.*, r.name as role, e.id as employee_id 
+       FROM users u 
+       LEFT JOIN user_roles ur ON u.id = ur.user_id 
+       LEFT JOIN roles r ON ur.role_id = r.id 
+       LEFT JOIN employees e ON u.id = e.user_id 
+       WHERE u.email = $1`,
       [email.toLowerCase()]
     );
     return row ? this.mapRowToUser(row) : null;
@@ -37,7 +42,12 @@ export class UserRepository {
 
   async findById(id: string): Promise<User | null> {
     const row = await queryOne<UserRow>(
-      `SELECT * FROM users WHERE id = $1`,
+      `SELECT u.*, r.name as role, e.id as employee_id 
+       FROM users u 
+       LEFT JOIN user_roles ur ON u.id = ur.user_id 
+       LEFT JOIN roles r ON ur.role_id = r.id 
+       LEFT JOIN employees e ON u.id = e.user_id 
+       WHERE u.id = $1`,
       [id]
     );
     return row ? this.mapRowToUser(row) : null;

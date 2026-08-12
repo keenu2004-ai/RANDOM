@@ -46,9 +46,9 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    if (response.status === 401 && endpoint !== '/auth/login') {
+    if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/me') {
       removeStoredToken();
-      window.location.href = '/login';
+      window.location.href = '/';
     }
     // 403 just throws the error below for components to handle
     throw new Error(data.error || `HTTP error ${response.status}`);

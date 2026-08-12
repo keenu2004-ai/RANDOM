@@ -1,0 +1,6 @@
+{
+  "name": "THEIAKSHI ENTERPRISE",
+  "description": "Enterprise HRMS Platform with full-stack capabilities, RBAC, Attendance with GPS geofencing, Leave, Expenses, Timesheets, Payroll, Documents, Compliance, and Helpdesk.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

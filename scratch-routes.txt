@@ -1,0 +1,106 @@
+// Create Correction Request
+projectsTimesheetsRouter.post('/timesheets/corrections', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const payload = req.body;
+    if (!payload.timesheet_id || !payload.reason) {
+      return res.status(400).json({ error: 'Timesheet ID and reason are required.' });
+    }
+    const ts = await timesheetRepository.getTimesheetById(req.user!.organizationId, payload.timesheet_id);
+    if (!ts) {
+      return res.status(404).json({ error: 'Timesheet not found.' });
+    }
+    if (ts.employeeId !== req.user!.employeeId) {
+      return res.status(403).json({ error: 'You can only request corrections for your own timesheets.' });
+    }
+
+    const created = await timesheetRepository.createCorrectionRequest(req.user!.organizationId, payload, req.user!.employeeId!);
+    
+    if (typeof logAudit === 'function') logAudit(req.user!.organizationId, req.user!.userId, req.user!.email, req.user!.employeeName || '', 'CREATE_TIMESHEET_CORRECTION', 'TIMESHEET_CORRECTION', created.id, `Requested correction for timesheet ${payload.timesheet_id}`);
+
+    return res.status(201).json(created);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+// Get Correction Requests
+projectsTimesheetsRouter.get('/timesheets/corrections', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const list = await timesheetRepository.getCorrectionRequests(req.user!.organizationId, req.query, req.user!.role, req.user!.employeeId!);
+    return res.json(list);
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Approve Correction Request
+projectsTimesheetsRouter.patch('/timesheets/corrections/:id/approve', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const correction = await timesheetRepository.getCorrectionRequestById(req.user!.organizationId, req.params.id);
+    if (!correction) return res.status(404).json({ error: 'Correction request not found.' });
+
+    // Enforce RBAC
+    if (req.user!.employeeId === correction.employee_id) {
+      return res.status(403).json({ error: 'You cannot approve your own request.' });
+    }
+    if (req.user!.role === 'MANAGER' && correction.managerIdOfEmployee !== req.user!.employeeId) {
+      return res.status(403).json({ error: 'Access Denied: Not the direct manager.' });
+    }
+
+    const approverId = req.user!.employeeId || req.user!.userId;
+    const updated = await timesheetRepository.approveCorrectionRequest(req.user!.organizationId, req.params.id, approverId!);
+
+    if (typeof logAudit === 'function') logAudit(req.user!.organizationId, req.user!.userId, req.user!.email, req.user!.employeeName || '', 'APPROVE_TIMESHEET_CORRECTION', 'TIMESHEET_CORRECTION', req.params.id, `Approved timesheet correction ${req.params.id}`);
+
+    await notificationService.createNotification({
+      organizationId: req.user!.organizationId,
+      recipientEmployeeId: correction.employee_id,
+      notificationType: 'TIMESHEET_CORRECTION_APPROVED',
+      title: 'Timesheet Correction Approved',
+      message: `Your correction request for timesheet was APPROVED.`,
+      entityType: 'TIMESHEET_CORRECTION',
+      entityId: req.params.id
+    });
+
+    return res.json(updated);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Reject Correction Request
+projectsTimesheetsRouter.patch('/timesheets/corrections/:id/reject', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const correction = await timesheetRepository.getCorrectionRequestById(req.user!.organizationId, req.params.id);
+    if (!correction) return res.status(404).json({ error: 'Correction request not found.' });
+
+    if (req.user!.employeeId === correction.employee_id) {
+      return res.status(403).json({ error: 'You cannot reject your own request.' });
+    }
+    if (req.user!.role === 'MANAGER' && correction.managerIdOfEmployee !== req.user!.employeeId) {
+      return res.status(403).json({ error: 'Access Denied: Not the direct manager.' });
+    }
+
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ error: 'Reason is required.' });
+
+    const rejectorId = req.user!.employeeId || req.user!.userId;
+    const updated = await timesheetRepository.rejectCorrectionRequest(req.user!.organizationId, req.params.id, rejectorId!, reason);
+
+    if (typeof logAudit === 'function') logAudit(req.user!.organizationId, req.user!.userId, req.user!.email, req.user!.employeeName || '', 'REJECT_TIMESHEET_CORRECTION', 'TIMESHEET_CORRECTION', req.params.id, `Rejected timesheet correction ${req.params.id}`);
+
+    await notificationService.createNotification({
+      organizationId: req.user!.organizationId,
+      recipientEmployeeId: correction.employee_id,
+      notificationType: 'TIMESHEET_CORRECTION_REJECTED',
+      title: 'Timesheet Correction Rejected',
+      message: `Your correction request for timesheet was REJECTED: ${reason}`,
+      entityType: 'TIMESHEET_CORRECTION',
+      entityId: req.params.id
+    });
+
+    return res.json(updated);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});

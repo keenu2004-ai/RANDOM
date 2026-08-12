@@ -109,7 +109,7 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ userRole }) => {
           hrmsApi.getEmployees(),
         ]);
         setStructures(structsRes || []);
-        setEmployees(empRes || []);
+        setEmployees(empRes?.data || empRes || []);
       }
     } catch (err: any) {
       console.error('Failed to load payroll data:', err);
@@ -1129,3 +1129,4 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ userRole }) => {
 </div>
   );
 };
+

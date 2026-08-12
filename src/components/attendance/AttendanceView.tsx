@@ -203,8 +203,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
         setTotalPages(attRes.pagination.totalPages);
       }
       setWorkforceStats(statsRes);
-      if (empRes.employees) {
-        setEmployeesList(empRes.employees);
+      if (empRes?.data || empRes?.employees) {
+        setEmployeesList(empRes.data || empRes.employees || []);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load workforce attendance data');
@@ -1513,3 +1513,4 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
 </div>
   );
 };
+

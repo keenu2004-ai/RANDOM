@@ -89,7 +89,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
       if (isHRorAdmin) {
         const empRes = await hrmsApi.getEmployees();
-        setEmployees(empRes || []);
+        setEmployees(empRes?.data || empRes || []);
       }
     } catch (err: any) {
       console.error('Failed to load documents:', err);
@@ -691,3 +691,4 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     </div>
   );
 };
+

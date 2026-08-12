@@ -6,7 +6,12 @@ export class EmployeeRepository {
     const branches = await query(`SELECT * FROM branches WHERE organization_id = $1`, [organizationId]);
     const departments = await query(`SELECT * FROM departments WHERE organization_id = $1`, [organizationId]);
     const designations = await query(`SELECT * FROM designations WHERE organization_id = $1`, [organizationId]);
-    const teams = await query(`SELECT * FROM teams WHERE organization_id = $1`, [organizationId]);
+    const teams = await query(`
+      SELECT t.* 
+      FROM teams t 
+      JOIN departments d ON t.department_id = d.id 
+      WHERE d.organization_id = $1
+    `, [organizationId]);
     const shifts = await query(`SELECT * FROM shifts WHERE organization_id = $1`, [organizationId]);
     const managers = await query(`
       SELECT id, first_name || ' ' || last_name as name, employee_code as code, email 

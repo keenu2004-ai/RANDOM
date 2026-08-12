@@ -19,10 +19,10 @@ export class ReportRepository {
     const totalEmployees = await queryOne(`SELECT COUNT(*) as count FROM employees e WHERE e.organization_id = $1 AND e.deleted_at IS NULL ${empFilter}`, params);
     
     // Attendance stats for today
-    const presentToday = await queryOne(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE a.organization_id = $1 AND a.date = $${pLen} AND a.status = 'PRESENT' ${empFilter}`, [...params, dateStr]);
+    const presentToday = await queryOne(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE e.organization_id = $1 AND a.date = $${pLen} AND a.status = 'PRESENT' ${empFilter}`, [...params, dateStr]);
     
     // Leaves today
-    const leavesToday = await queryOne(`SELECT COUNT(*) as count FROM leaves l JOIN employees e ON l.employee_id = e.id WHERE l.organization_id = $1 AND l.start_date <= $${pLen} AND l.end_date >= $${pLen} AND l.status = 'APPROVED' ${empFilter}`, [...params, dateStr]);
+    const leavesToday = await queryOne(`SELECT COUNT(*) as count FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.organization_id = $1 AND l.start_date <= $${pLen} AND l.end_date >= $${pLen} AND l.status = 'APPROVED' ${empFilter}`, [...params, dateStr]);
 
     return {
       totalEmployees: parseInt(totalEmployees?.count || '0'),
@@ -92,7 +92,7 @@ export class ReportRepository {
                  JOIN employees e ON a.employee_id = e.id
                  LEFT JOIN departments d ON e.department_id = d.id
                  LEFT JOIN branches b ON e.branch_id = b.id
-                 WHERE a.organization_id = $1 ${empFilter}`;
+                 WHERE e.organization_id = $1 ${empFilter}`;
       const result = await query(q, baseParams);
       let totalWorkHours = 0;
       rows = result.map((a: any) => {
@@ -115,8 +115,8 @@ export class ReportRepository {
       summary = { totalRecords: rows.length, totalWorkHours, avgWorkHours: rows.length > 0 ? (totalWorkHours / rows.length).toFixed(2) : 0 };
     } else if (reportType === 'leaves') {
        let q = `SELECT l.*, e.employee_code, e.first_name, e.last_name
-                FROM leaves l JOIN employees e ON l.employee_id = e.id
-                WHERE l.organization_id = $1 ${empFilter}`;
+                FROM leave_requests l JOIN employees e ON l.employee_id = e.id
+                WHERE e.organization_id = $1 ${empFilter}`;
        const result = await query(q, baseParams);
        rows = result.map((l: any) => ({
          id: l.id,
@@ -170,8 +170,10 @@ export class ReportRepository {
        });
        summary = { totalRecords: rows.length, totalHours };
     } else if (reportType === 'payroll') {
-       let q = `SELECT p.*, e.employee_code, e.first_name, e.last_name
-                FROM payroll p JOIN employees e ON p.employee_id = e.id
+       let q = `SELECT p.*, pp.month, pp.year, e.employee_code, e.first_name, e.last_name
+                FROM payroll_records p 
+                JOIN payroll_periods pp ON p.payroll_period_id = pp.id
+                JOIN employees e ON p.employee_id = e.id
                 WHERE p.organization_id = $1 ${empFilter}`;
        const result = await query(q, baseParams);
        let totalNet = 0;

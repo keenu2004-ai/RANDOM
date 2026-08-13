@@ -30,7 +30,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { hrmsApi } from '../../lib/api-client';
-import { AttendanceRecord, AttendanceStatus, Employee , AttendanceRegularizationRequest, TimesheetCorrectionRequest, LeaveCorrectionRequest, PayrollAdjustment } from '../../types/hrms';
+import { AttendanceRecord, AttendanceStatus, Employee, AttendanceRegularizationRequest, TimesheetCorrectionRequest, LeaveCorrectionRequest, PayrollAdjustment } from '../../types/hrms';
 
 interface AttendanceViewProps {
   userRole: string;
@@ -119,8 +119,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState({
-    officeLatitude: 12.9716,
-    officeLongitude: 77.5946,
+    officeLatitude: 28.6209,
+    officeLongitude: 77.1363,
     allowedGeofenceRadiusMeters: 500,
     enforceGpsCheckIn: true,
     shiftStartTime: '09:00',
@@ -153,7 +153,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
       ]);
 
       setTodayData(todayRes);
-            setMyAttendance(myAttRes.data || myAttRes);
+      setMyAttendance(myAttRes.data || myAttRes);
       if (myAttRes.pagination) {
         setTotal(myAttRes.pagination.total);
         setTotalPages(myAttRes.pagination.totalPages);
@@ -162,8 +162,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
 
       if (settingsRes) {
         setSettingsForm({
-          officeLatitude: settingsRes.officeLatitude || 12.9716,
-          officeLongitude: settingsRes.officeLongitude || 77.5946,
+          officeLatitude: settingsRes.officeLatitude || 28.6209,
+          officeLongitude: settingsRes.officeLongitude || 77.1363,
           allowedGeofenceRadiusMeters: settingsRes.allowedGeofenceRadiusMeters || 500,
           enforceGpsCheckIn: settingsRes.enforceGpsCheckIn ?? true,
           shiftStartTime: settingsRes.defaultShift?.startTime || '09:00',
@@ -181,7 +181,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
   const loadWorkforceData = async () => {
     try {
       setLoading(true);
-      const params: Record<string, string> = { 
+      const params: Record<string, string> = {
         date: filterDate,
         page: String(page),
         limit: String(limit),
@@ -197,7 +197,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
         hrmsApi.getEmployees().catch(() => ({ employees: [] }))
       ]);
 
-            setWorkforceAttendance(attRes.data || attRes);
+      setWorkforceAttendance(attRes.data || attRes);
       if (attRes.pagination) {
         setTotal(attRes.pagination.total);
         setTotalPages(attRes.pagination.totalPages);
@@ -219,8 +219,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
       const res = await hrmsApi.getAttendanceSettings();
       if (res) {
         setSettingsForm({
-          officeLatitude: res.officeLatitude || 12.9716,
-          officeLongitude: res.officeLongitude || 77.5946,
+          officeLatitude: res.officeLatitude || 28.6209,
+          officeLongitude: res.officeLongitude || 77.1363,
           allowedGeofenceRadiusMeters: res.allowedGeofenceRadiusMeters || 500,
           enforceGpsCheckIn: res.enforceGpsCheckIn ?? true,
           shiftStartTime: res.defaultShift?.startTime || '09:00',
@@ -272,7 +272,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
           setGpsError('Unable to retrieve current location fix: ' + err.message);
         }
         // Set fallback coordinates for demonstration/testing if blocked in iFrame
-        const fallback = { latitude: 12.9716, longitude: 77.5946, accuracy: 10 };
+        const fallback = { latitude: 28.6209, longitude: 77.1363, accuracy: 10 };
         setCurrentCoords(fallback);
         setCalculatedDistance(0);
       },
@@ -534,11 +534,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
             <button
               id="tab-my-attendance"
               onClick={() => setActiveTab('MY_ATTENDANCE')}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${
-                activeTab === 'MY_ATTENDANCE'
+              className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'MY_ATTENDANCE'
                   ? 'bg-white text-blue-600 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <Compass className="w-4 h-4" />
               <span>My Geofence Check-In</span>
@@ -547,11 +546,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
             <button
               id="tab-workforce-attendance"
               onClick={() => setActiveTab('WORKFORCE')}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${
-                activeTab === 'WORKFORCE'
+              className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'WORKFORCE'
                   ? 'bg-white text-blue-600 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <Users className="w-4 h-4" />
               <span>Workforce Attendance</span>
@@ -561,11 +559,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
               <button
                 id="tab-attendance-settings"
                 onClick={() => setActiveTab('SETTINGS')}
-                className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${
-                  activeTab === 'SETTINGS'
+                className={`px-3.5 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${activeTab === 'SETTINGS'
                     ? 'bg-white text-blue-600 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Settings className="w-4 h-4" />
                 <span>Geofence & Shifts</span>
@@ -672,11 +669,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                   <div className="text-[10px] text-slate-400 flex items-center justify-between">
                     <span>Allowed Radius: {settingsForm.allowedGeofenceRadiusMeters}m</span>
                     <span
-                      className={`font-bold px-2 py-0.5 rounded text-[10px] ${
-                        isGeofenceValid
+                      className={`font-bold px-2 py-0.5 rounded text-[10px] ${isGeofenceValid
                           ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700'
                           : 'bg-red-900/80 text-red-300 border border-red-700'
-                      }`}
+                        }`}
                     >
                       {calculatedDistance !== null ? `${calculatedDistance}m away` : 'Calculating...'}
                     </span>
@@ -728,11 +724,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                     !todayData.record.checkInTime ||
                     !!todayData.record.checkOutTime
                   }
-                  className={`w-full sm:w-1/3 py-3 px-4 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:bg-slate-800 disabled:text-slate-500 ${
-                    todayData?.onBreak
+                  className={`w-full sm:w-1/3 py-3 px-4 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:bg-slate-800 disabled:text-slate-500 ${todayData?.onBreak
                       ? 'bg-amber-600 hover:bg-amber-500 text-white animate-pulse'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                  }`}
+                    }`}
                 >
                   <Coffee className="w-4 h-4" />
                   <span>{todayData?.onBreak ? 'END BREAK' : 'TAKE A BREAK'}</span>
@@ -794,15 +789,14 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
 
               <div className="pt-4 border-t border-slate-100 text-center">
                 <span
-                  className={`inline-flex items-center space-x-1 px-3.5 py-1 rounded-full text-xs font-bold uppercase ${
-                    todayData?.record?.status === 'PRESENT'
+                  className={`inline-flex items-center space-x-1 px-3.5 py-1 rounded-full text-xs font-bold uppercase ${todayData?.record?.status === 'PRESENT'
                       ? 'bg-emerald-100 text-emerald-800'
                       : todayData?.record?.status === 'LATE'
-                      ? 'bg-amber-100 text-amber-800'
-                      : todayData?.record?.status === 'HALF_DAY'
-                      ? 'bg-indigo-100 text-indigo-800'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
+                        ? 'bg-amber-100 text-amber-800'
+                        : todayData?.record?.status === 'HALF_DAY'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Status: {todayData?.record?.status || 'NOT CHECKED IN'}</span>
@@ -860,9 +854,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center space-x-1 font-medium ${
-                              a.inGeofence !== false ? 'text-emerald-700' : 'text-amber-700'
-                            }`}
+                            className={`inline-flex items-center space-x-1 font-medium ${a.inGeofence !== false ? 'text-emerald-700' : 'text-amber-700'
+                              }`}
                           >
                             {a.inGeofence !== false ? (
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -875,17 +868,16 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                         <td className="px-4 py-3 font-semibold text-slate-900">{a.workingHours || 0} hrs</td>
                         <td className="px-4 py-3">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              a.status === 'PRESENT'
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.status === 'PRESENT'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : a.status === 'LATE'
-                                ? 'bg-amber-100 text-amber-800'
-                                : a.status === 'HALF_DAY'
-                                ? 'bg-indigo-100 text-indigo-800'
-                                : a.status === 'ON_LEAVE'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : a.status === 'HALF_DAY'
+                                    ? 'bg-indigo-100 text-indigo-800'
+                                    : a.status === 'ON_LEAVE'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-red-100 text-red-800'
+                              }`}
                           >
                             {a.status}
                           </span>
@@ -905,14 +897,14 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                 Showing page {page} of {totalPages} (Total: {total})
               </div>
               <div className="flex space-x-2">
-                <button 
+                <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
                   className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <button 
+                <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
@@ -1103,9 +1095,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                         <td className="px-4 py-3 font-bold text-slate-900">{a.workingHours || 0} hrs</td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center space-x-1 text-[11px] font-medium ${
-                              a.inGeofence !== false ? 'text-emerald-700' : 'text-amber-700'
-                            }`}
+                            className={`inline-flex items-center space-x-1 text-[11px] font-medium ${a.inGeofence !== false ? 'text-emerald-700' : 'text-amber-700'
+                              }`}
                           >
                             {a.inGeofence !== false ? (
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -1117,17 +1108,16 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              a.status === 'PRESENT'
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.status === 'PRESENT'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : a.status === 'LATE'
-                                ? 'bg-amber-100 text-amber-800'
-                                : a.status === 'HALF_DAY'
-                                ? 'bg-indigo-100 text-indigo-800'
-                                : a.status === 'ON_LEAVE'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : a.status === 'HALF_DAY'
+                                    ? 'bg-indigo-100 text-indigo-800'
+                                    : a.status === 'ON_LEAVE'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-red-100 text-red-800'
+                              }`}
                           >
                             {a.status}
                           </span>
@@ -1165,14 +1155,14 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                 Showing page {page} of {totalPages} (Total: {total})
               </div>
               <div className="flex space-x-2">
-                <button 
+                <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
                   className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
                 >
                   Previous
                 </button>
-                <button 
+                <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-50"
@@ -1443,7 +1433,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
           </div>
         </div>
       )}
-    
+
       {/* PHASE 14 INJECTIONS */}
       <div className="mt-8 p-4 bg-purple-50 border border-purple-200 rounded-xl">
         <h3 className="font-bold text-purple-900">Phase 14 Actions (AttendanceRegularizationRequest)</h3>
@@ -1475,7 +1465,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                     const reqs = await hrmsApi.getAttendanceRegularizations();
                     console.log(reqs);
                     alert('Loaded ' + (reqs.data?.length || 0) + ' requests');
-                  } catch(e) {
+                  } catch (e) {
                     alert('Error: ' + e);
                   }
                 }} className="px-4 py-2 bg-indigo-600 text-white rounded w-max">
@@ -1488,7 +1478,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                     await hrmsApi.approveAttendanceRegularization(id);
                     alert('Approved');
                     window.location.reload();
-                  } catch(e) { alert('Error: ' + e); }
+                  } catch (e) { alert('Error: ' + e); }
                 }} className="px-4 py-2 bg-emerald-600 text-white rounded w-max">
                   Approve Request
                 </button>
@@ -1501,7 +1491,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
                     await hrmsApi.rejectAttendanceRegularization(id, reason);
                     alert('Rejected');
                     window.location.reload();
-                  } catch(e) { alert('Error: ' + e); }
+                  } catch (e) { alert('Error: ' + e); }
                 }} className="px-4 py-2 bg-red-600 text-white rounded w-max">
                   Reject Request
                 </button>
@@ -1510,7 +1500,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
           )}
         </div>
       </div>
-</div>
+    </div>
   );
 };
 

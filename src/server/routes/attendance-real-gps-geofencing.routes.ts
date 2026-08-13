@@ -178,7 +178,9 @@ attendanceRealGpsGeofencingRouter.patch('/attendance/regularization/:id/reject',
     return res.status(400).json({ error: error.message });
   }
 });
-attendanceRealGpsGeofencingRouter.get('/settings/attendance', authenticateToken, async (req, res) => {
-  return res.json(await attendanceRepository.getSettings());
+attendanceRealGpsGeofencingRouter.get('/settings/attendance', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  return res.json(await attendanceRepository.getSettings(req.user!.organizationId));
 });
-attendanceRealGpsGeofencingRouter.patch('/settings/attendance', authenticateToken, requireRoles('SUPER_ADMIN'), (req, res) => res.json({}));
+attendanceRealGpsGeofencingRouter.patch('/settings/attendance', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  return res.json(await attendanceRepository.updateSettings(req.user!.organizationId, req.body));
+});

@@ -159,13 +159,13 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
         },
         err => {
           setGpsError('GPS permission denied or unavailable. Using default HQ location.');
-          setCoords({ latitude: 12.9716, longitude: 77.5946 });
+          setCoords({ latitude: 28.6209, longitude: 77.1363 });
           setGpsAddress('Bengaluru Tech Park HQ (Geofence Verified)');
         },
         { enableHighAccuracy: true, timeout: 8000 }
       );
     } else {
-      setCoords({ latitude: 12.9716, longitude: 77.5946 });
+      setCoords({ latitude: 28.6209, longitude: 77.1363 });
       setGpsAddress('Bengaluru Tech Park HQ (Default)');
     }
   };
@@ -178,8 +178,8 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
     try {
       setLoading(true);
       setStatusMsg(null);
-      const lat = coords?.latitude || 12.9716;
-      const lng = coords?.longitude || 77.5946;
+      const lat = coords?.latitude || 28.6209;
+      const lng = coords?.longitude || 77.1363;
 
       await hrmsApi.checkIn({
         latitude: lat,
@@ -201,8 +201,8 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
     try {
       setLoading(true);
       setStatusMsg(null);
-      const lat = coords?.latitude || 12.9716;
-      const lng = coords?.longitude || 77.5946;
+      const lat = coords?.latitude || 28.6209;
+      const lng = coords?.longitude || 77.1363;
 
       await hrmsApi.checkOut({
         latitude: lat,
@@ -402,13 +402,12 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
       </div>
 
       {/* Smartphone Frame Container */}
-      <div className={`transition-all duration-300 ${
-        deviceModel === 'responsive'
+      <div className={`transition-all duration-300 ${deviceModel === 'responsive'
           ? 'w-full max-w-md h-[780px]'
           : deviceModel === 'android'
-          ? 'w-[370px] h-[750px] rounded-[36px] border-[10px] border-slate-800 shadow-2xl'
-          : 'w-[360px] h-[740px] rounded-[52px] border-[12px] border-slate-800 shadow-2xl'
-      } bg-slate-900 p-2.5 relative flex flex-col overflow-hidden`}>
+            ? 'w-[370px] h-[750px] rounded-[36px] border-[10px] border-slate-800 shadow-2xl'
+            : 'w-[360px] h-[740px] rounded-[52px] border-[12px] border-slate-800 shadow-2xl'
+        } bg-slate-900 p-2.5 relative flex flex-col overflow-hidden`}>
 
         {/* Top Camera Notch / Dynamic Island */}
         <div className="w-28 h-4 bg-slate-950 rounded-b-xl mx-auto absolute top-0 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center space-x-2">
@@ -418,7 +417,7 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
 
         {/* Phone Screen Inside */}
         <div className="flex-1 bg-slate-950 text-white rounded-[38px] overflow-hidden flex flex-col pt-5 relative">
-          
+
           {/* Mobile App Bar */}
           <div className="px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between sticky top-0 z-40">
             {currentScreen !== 'dashboard' && currentScreen !== 'login' ? (
@@ -463,9 +462,8 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
 
           {/* Status Message Toast */}
           {statusMsg && (
-            <div className={`p-2.5 text-[11px] font-semibold text-center flex items-center justify-between px-4 animate-in fade-in slide-in-from-top-2 ${
-              statusMsg.type === 'success' ? 'bg-emerald-600 text-white' : statusMsg.type === 'error' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'
-            }`}>
+            <div className={`p-2.5 text-[11px] font-semibold text-center flex items-center justify-between px-4 animate-in fade-in slide-in-from-top-2 ${statusMsg.type === 'success' ? 'bg-emerald-600 text-white' : statusMsg.type === 'error' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'
+              }`}>
               <span className="truncate pr-2">{statusMsg.text}</span>
               <button onClick={() => setStatusMsg(null)}>
                 <X className="w-3.5 h-3.5" />

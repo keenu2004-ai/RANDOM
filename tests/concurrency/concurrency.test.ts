@@ -167,21 +167,21 @@ describe('Database Migration — Idempotency', () => {
     const path = await import('path');
     const { fileURLToPath } = await import('url');
     const { Pool } = await import('pg');
-    
+
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const schemaPath = path.join(__dirname, '../../src/server/db/schema.sql');
-    
+
     const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
     try {
       const schema = fs.readFileSync(schemaPath, 'utf-8');
       // Should not throw — IF NOT EXISTS ensures idempotency
       await pool.query(schema);
-      
+
       // Verify organizations table still exists
       const result = await pool.query(`SELECT COUNT(*) FROM organizations`);
       expect(parseInt(result.rows[0].count)).toBeGreaterThanOrEqual(0);
-      
+
       console.log('[MIGRATION] Double schema init succeeded — idempotent ✓');
     } catch (err) {
       // Some DDL errors are acceptable if tables already exist without IF NOT EXISTS
@@ -206,8 +206,8 @@ describe('Transaction Safety — Push Notification Failures Do Not Roll Back Bus
       .post('/api/attendance/check-in')
       .set('Authorization', `Bearer ${empToken}`)
       .send({
-        latitude: 12.9716,
-        longitude: 77.5946,
+        latitude: 28.6209,
+        longitude: 77.1363,
         accuracy: 5,
         address: 'Test Location',
       });

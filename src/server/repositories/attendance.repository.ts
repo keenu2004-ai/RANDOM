@@ -3,18 +3,18 @@ import { notificationService } from '../services/notification.service';
 import { logAudit } from '../utils';
 
 function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371e3;
-    const phi1 = lat1 * Math.PI / 180;
-    const phi2 = lat2 * Math.PI / 180;
-    const dPhi = (lat2 - lat1) * Math.PI / 180;
-    const dLambda = (lon2 - lon1) * Math.PI / 180;
+  const R = 6371e3;
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const dPhi = (lat2 - lat1) * Math.PI / 180;
+  const dLambda = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) *
+    Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c;
+  return R * c;
 }
 
 export class AttendanceRepository {
@@ -22,7 +22,7 @@ export class AttendanceRepository {
     const page = Number(queryParams.page) || 1;
     const limit = Number(queryParams.limit) || 10;
     const offset = (page - 1) * limit;
-    
+
     const safeColumns = ['date', 'check_in', 'check_out', 'status', 'work_hours'];
     const sortBy = safeColumns.includes(queryParams.sortBy) ? queryParams.sortBy : 'date';
     const sortOrder = queryParams.sortOrder === 'asc' ? 'asc' : 'desc';
@@ -65,7 +65,7 @@ export class AttendanceRepository {
     const limitParams = [...params, limit, offset];
 
     const data = await query(sql, limitParams);
-    const countRes = await queryOne<{count: string}>(countSql, params);
+    const countRes = await queryOne<{ count: string }>(countSql, params);
     const total = countRes ? parseInt(countRes.count, 10) : 0;
 
     return {
@@ -122,16 +122,16 @@ export class AttendanceRepository {
           LEFT JOIN attendance_locations bl ON e.branch_id = bl.branch_id
           WHERE e.id = $1 AND e.organization_id = $2
       `, [att.employeeId, organizationId]);
-      
+
       if (empRes.length === 0) throw new Error('Employee not found');
       const emp = empRes[0];
 
       if (emp.latitude != null && emp.longitude != null) {
-          const dist = getHaversineDistance(att.latitude, att.longitude, parseFloat(emp.latitude), parseFloat(emp.longitude));
-          const radius = emp.radius_meters || 200;
-          if (dist > radius) {
-              throw new Error('Geofence error: Outside of allowed branch radius');
-          }
+        const dist = getHaversineDistance(att.latitude, att.longitude, parseFloat(emp.latitude), parseFloat(emp.longitude));
+        const radius = emp.radius_meters || 200;
+        if (dist > radius) {
+          throw new Error('Geofence error: Outside of allowed branch radius');
+        }
       }
 
       let status = 'PRESENT';
@@ -142,7 +142,7 @@ export class AttendanceRepository {
         const shiftStart = new Date(now);
         shiftStart.setHours(hours, minutes, 0, 0);
         const graceMs = (shift.gracePeriodMinutes || 0) * 60 * 1000;
-        
+
         if (checkInDate.getTime() > shiftStart.getTime() + graceMs) {
           status = 'LATE';
         }
@@ -181,7 +181,7 @@ export class AttendanceRepository {
       const empId = attRes[0].employee_id;
       const checkInTime = new Date(attRes[0].check_in).getTime();
       const checkOutTime = new Date(now).getTime();
-      
+
       const workHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
 
       // calculate status based on shift (if late)
@@ -191,19 +191,19 @@ export class AttendanceRepository {
         FROM shifts s JOIN employees e ON e.shift_id = s.id 
         WHERE e.id = $1
       `, [empId]);
-      
+
       if (shiftRes.length > 0) {
         const shift = shiftRes[0];
         if (shift.start_time) {
-           const checkInDate = new Date(attRes[0].check_in);
-           const [hours, minutes] = shift.start_time.split(':').map(Number);
-           const shiftStart = new Date(checkInDate);
-           shiftStart.setHours(hours, minutes, 0, 0);
-           const graceMs = (shift.grace_period_minutes || 0) * 60 * 1000;
-           
-           if (checkInTime > shiftStart.getTime() + graceMs) {
-             status = 'LATE';
-           }
+          const checkInDate = new Date(attRes[0].check_in);
+          const [hours, minutes] = shift.start_time.split(':').map(Number);
+          const shiftStart = new Date(checkInDate);
+          shiftStart.setHours(hours, minutes, 0, 0);
+          const graceMs = (shift.grace_period_minutes || 0) * 60 * 1000;
+
+          if (checkInTime > shiftStart.getTime() + graceMs) {
+            status = 'LATE';
+          }
         }
       }
 
@@ -227,8 +227,42 @@ export class AttendanceRepository {
     }
   }
 
-  async getSettings() {
-    return { officeLatitude: 0, officeLongitude: 0, allowedGeofenceRadiusMeters: 50, enforceGpsCheckIn: false, defaultShift: {} };
+  async getSettings(organizationId: string) {
+    const r = await queryOne<any>(`SELECT * FROM organizations WHERE id = $1`, [organizationId]);
+    if (!r) return { officeLatitude: 28.6209, officeLongitude: 77.1363, allowedGeofenceRadiusMeters: 500, enforceGpsCheckIn: true, defaultShift: { startTime: '09:00', endTime: '18:00', gracePeriodMinutes: 15 } };
+
+    return {
+      officeLatitude: Number(r.office_latitude) || 28.6209,
+      officeLongitude: Number(r.office_longitude) || 77.1363,
+      allowedGeofenceRadiusMeters: Number(r.allowed_geofence_radius_meters) || 500,
+      enforceGpsCheckIn: r.enforce_gps_check_in ?? true,
+      defaultShift: {
+        startTime: r.shift_start_time || '09:00',
+        endTime: r.shift_end_time || '18:00',
+        gracePeriodMinutes: Number(r.grace_period_minutes) || 15
+      }
+    };
+  }
+
+  async updateSettings(organizationId: string, settings: any) {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (settings.officeLatitude !== undefined) { updates.push(`office_latitude = $${idx++}`); values.push(settings.officeLatitude); }
+    if (settings.officeLongitude !== undefined) { updates.push(`office_longitude = $${idx++}`); values.push(settings.officeLongitude); }
+    if (settings.allowedGeofenceRadiusMeters !== undefined) { updates.push(`allowed_geofence_radius_meters = $${idx++}`); values.push(settings.allowedGeofenceRadiusMeters); }
+    if (settings.enforceGpsCheckIn !== undefined) { updates.push(`enforce_gps_check_in = $${idx++}`); values.push(settings.enforceGpsCheckIn); }
+    if (settings.shiftStartTime !== undefined) { updates.push(`shift_start_time = $${idx++}`); values.push(settings.shiftStartTime); }
+    if (settings.shiftEndTime !== undefined) { updates.push(`shift_end_time = $${idx++}`); values.push(settings.shiftEndTime); }
+    if (settings.gracePeriodMinutes !== undefined) { updates.push(`grace_period_minutes = $${idx++}`); values.push(settings.gracePeriodMinutes); }
+
+    if (updates.length > 0) {
+      values.push(organizationId);
+      await query(`UPDATE organizations SET ${updates.join(', ')} WHERE id = $${idx}`, values);
+    }
+
+    return this.getSettings(organizationId);
   }
 
   // Phase 14: Regularization Requests
@@ -295,7 +329,7 @@ export class AttendanceRepository {
       params.push(filters.status);
       pIdx++;
     }
-    
+
     if (filters.employeeId && filters.employeeId !== 'ALL' && role !== 'EMPLOYEE') {
       sql += ` AND r.employee_id = $${pIdx}`;
       countSql += ` AND r.employee_id = $${pIdx}`;
@@ -307,7 +341,7 @@ export class AttendanceRepository {
     const limitParams = [...params, limit, offset];
 
     const data = await query(sql, limitParams);
-    const countRes = await queryOne<{count: string}>(countSql, params);
+    const countRes = await queryOne<{ count: string }>(countSql, params);
     const total = countRes ? parseInt(countRes.count, 10) : 0;
 
     return {
@@ -342,7 +376,7 @@ export class AttendanceRepository {
         SELECT * FROM attendance_regularization_requests 
         WHERE id = $1 FOR UPDATE
       `, [reqId]);
-      
+
       if (reqRes.length === 0) throw new Error('Request not found');
       const request = reqRes[0];
 
@@ -350,10 +384,10 @@ export class AttendanceRepository {
       if (request.employee_id === reviewerEmpId) throw new Error('Cannot self-approve regularization requests');
 
       if (reviewerRole === 'MANAGER') {
-         const empRes = await client.query(`SELECT manager_id FROM employees WHERE id = $1`, [request.employee_id]);
-         if (empRes.length === 0 || empRes[0].manager_id !== reviewerEmpId) {
-             throw new Error('You are not authorized to approve this request: Manager can only approve direct subordinates');
-         }
+        const empRes = await client.query(`SELECT manager_id FROM employees WHERE id = $1`, [request.employee_id]);
+        if (empRes.length === 0 || empRes[0].manager_id !== reviewerEmpId) {
+          throw new Error('You are not authorized to approve this request: Manager can only approve direct subordinates');
+        }
       }
 
       if (request.status !== 'PENDING') throw new Error('Request is not in PENDING state');
@@ -363,15 +397,15 @@ export class AttendanceRepository {
         const attRes = await client.query(`
           SELECT * FROM attendance WHERE id = $1 FOR UPDATE
         `, [request.attendance_id]);
-        
+
         if (attRes.length > 0) {
           const checkIn = request.check_in_time || attRes[0].check_in;
           const checkOut = request.check_out_time || attRes[0].check_out;
-          
+
           let workHours = attRes[0].work_hours;
           if (checkIn && checkOut) {
-             const ms = new Date(checkOut).getTime() - new Date(checkIn).getTime();
-             workHours = Math.max(0, ms / (1000 * 60 * 60)).toFixed(2);
+            const ms = new Date(checkOut).getTime() - new Date(checkIn).getTime();
+            workHours = Math.max(0, ms / (1000 * 60 * 60)).toFixed(2);
           }
 
           await client.query(`
@@ -384,8 +418,8 @@ export class AttendanceRepository {
         // No existing attendance record, create one
         let workHours = 0;
         if (request.check_in_time && request.check_out_time) {
-             const ms = new Date(request.check_out_time).getTime() - new Date(request.check_in_time).getTime();
-             workHours = Math.max(0, ms / (1000 * 60 * 60));
+          const ms = new Date(request.check_out_time).getTime() - new Date(request.check_in_time).getTime();
+          workHours = Math.max(0, ms / (1000 * 60 * 60));
         }
         await client.query(`
           INSERT INTO attendance (employee_id, date, check_in, check_out, status, work_hours, notes)
@@ -402,7 +436,7 @@ export class AttendanceRepository {
 
       // fetch reviewer user details for audit
       const reviewerRes = await client.query(`SELECT u.id, u.email, e.first_name FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`, [reviewerEmpId]);
-      
+
       const revId = reviewerRes.length > 0 ? reviewerRes[0].id : 'system';
       const revEmail = reviewerRes.length > 0 ? reviewerRes[0].email : 'system@domain.com';
       const revName = reviewerRes.length > 0 ? reviewerRes[0].first_name : 'System';
@@ -447,7 +481,7 @@ export class AttendanceRepository {
         SELECT * FROM attendance_regularization_requests 
         WHERE id = $1 FOR UPDATE
       `, [reqId]);
-      
+
       if (reqRes.length === 0) throw new Error('Request not found');
       const request = reqRes[0];
 
@@ -455,10 +489,10 @@ export class AttendanceRepository {
       if (request.employee_id === reviewerEmpId) throw new Error('Cannot self-reject regularization requests');
 
       if (reviewerRole === 'MANAGER') {
-         const empRes = await client.query(`SELECT manager_id FROM employees WHERE id = $1`, [request.employee_id]);
-         if (empRes.length === 0 || empRes[0].manager_id !== reviewerEmpId) {
-             throw new Error('You are not authorized to reject this request: Manager can only reject direct subordinates');
-         }
+        const empRes = await client.query(`SELECT manager_id FROM employees WHERE id = $1`, [request.employee_id]);
+        if (empRes.length === 0 || empRes[0].manager_id !== reviewerEmpId) {
+          throw new Error('You are not authorized to reject this request: Manager can only reject direct subordinates');
+        }
       }
 
       if (request.status !== 'PENDING') throw new Error('Request is not in PENDING state');
@@ -471,7 +505,7 @@ export class AttendanceRepository {
       `, [reviewerEmpId, reason, reqId]);
 
       const reviewerRes = await client.query(`SELECT u.id, u.email, e.first_name FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`, [reviewerEmpId]);
-      
+
       const revId = reviewerRes.length > 0 ? reviewerRes[0].id : 'system';
       const revEmail = reviewerRes.length > 0 ? reviewerRes[0].email : 'system@domain.com';
 

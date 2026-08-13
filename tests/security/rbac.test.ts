@@ -225,8 +225,8 @@ describe('Security — Client Identity Override Prevention', () => {
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         employeeId: 'other-employee-id', // This should be ignored
-        latitude: 12.9716,
-        longitude: 77.5946,
+        latitude: 28.6209,
+        longitude: 77.1363,
         accuracy: 5,
       });
 

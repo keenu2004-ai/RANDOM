@@ -68,6 +68,33 @@ export class LeaveRepository {
     }
   }
 
+  async getLeaveTypeById(orgId: string, id: string) {
+    const r = await queryOne(`SELECT * FROM leave_types WHERE organization_id = $1 AND id = $2`, [orgId, id]);
+    if (!r) return null;
+    return { id: r.id, name: r.name, code: r.code, annualQuota: r.annual_quota, carryForwardAllowed: r.carry_forward_allowed, requiresAttachment: r.requires_attachment, description: r.description, isActive: r.is_active };
+  }
+
+  async updateLeaveType(orgId: string, id: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM leave_types WHERE organization_id = $1 AND id = $2`, [orgId, id]);
+      if (!old) throw new Error('Leave type not found');
+      const fields: string[] = []; const values: any[] = []; let idx = 1;
+      if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
+      if (data.annualQuota !== undefined) { fields.push(`annual_quota = $${idx++}`); values.push(data.annualQuota); }
+      if (data.carryForwardAllowed !== undefined) { fields.push(`carry_forward_allowed = $${idx++}`); values.push(data.carryForwardAllowed); }
+      if (data.requiresAttachment !== undefined) { fields.push(`requires_attachment = $${idx++}`); values.push(data.requiresAttachment); }
+      if (data.description !== undefined) { fields.push(`description = $${idx++}`); values.push(data.description); }
+      if (data.isActive !== undefined) { fields.push(`is_active = $${idx++}`); values.push(data.isActive); }
+      if (fields.length === 0) { await client.commit(); return old; }
+      values.push(orgId, id);
+      const res = await client.queryOne(`UPDATE leave_types SET ${fields.join(', ')} WHERE organization_id = $${idx} AND id = $${idx + 1} RETURNING *`, values);
+      await logMasterDataChangeTx(client, { organizationId: orgId, actorUserId: actorUserId || null, action: 'UPDATE_LEAVE_TYPE', entityType: 'LEAVE_TYPE' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return { id: res.id, name: res.name, code: res.code, annualQuota: res.annual_quota, carryForwardAllowed: res.carry_forward_allowed, requiresAttachment: res.requires_attachment, description: res.description, isActive: res.is_active };
+    } catch (err) { await client.rollback(); throw err; }
+  }
+
   async getLeaveRequests(orgId: string, filters: any) {
     let baseQuery = `
       FROM leave_requests r

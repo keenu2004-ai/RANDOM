@@ -31,13 +31,195 @@ export class EmployeeRepository {
     };
   }
 
-  async createDepartment(organizationId: string, data: any) {
-    const res = await queryOne(`
-      INSERT INTO departments (organization_id, branch_id, name, code, description)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `, [organizationId, data.branchId || null, data.name, data.code, data.description || '']);
-    return res;
+  async createDepartment(organizationId: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const res = await client.queryOne(`
+        INSERT INTO departments (organization_id, branch_id, name, code, description)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [organizationId, data.branchId || null, data.name, data.code || data.name.slice(0, 3).toUpperCase(), data.description || '']);
+
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'CREATE_DEPARTMENT', entityType: 'DEPARTMENT' as any, entityId: res.id, oldValues: null, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async updateDepartment(organizationId: string, id: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM departments WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Department not found');
+      const fields: string[] = []; const values: any[] = []; let idx = 1;
+      if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
+      if (data.code !== undefined) { fields.push(`code = $${idx++}`); values.push(data.code); }
+      if (data.description !== undefined) { fields.push(`description = $${idx++}`); values.push(data.description); }
+      if (data.branchId !== undefined) { fields.push(`branch_id = $${idx++}`); values.push(data.branchId || null); }
+      if (fields.length === 0) { await client.commit(); return old; }
+      values.push(organizationId, id);
+      const res = await client.queryOne(`UPDATE departments SET ${fields.join(', ')} WHERE organization_id = $${idx} AND id = $${idx + 1} RETURNING *`, values);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'UPDATE_DEPARTMENT', entityType: 'DEPARTMENT' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async deleteDepartment(organizationId: string, id: string, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM departments WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Department not found');
+      const empCheck = await client.queryOne(`SELECT id FROM employees WHERE organization_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`, [organizationId, id]);
+      if (empCheck) throw new Error('Cannot delete department with active employees. Reassign employees first.');
+      const res = await client.queryOne(`DELETE FROM departments WHERE organization_id = $1 AND id = $2 RETURNING *`, [organizationId, id]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'DELETE_DEPARTMENT', entityType: 'DEPARTMENT' as any, entityId: id, oldValues: old, newValues: null, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  // --- BRANCHES ---
+  async createBranch(organizationId: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const res = await client.queryOne(`
+        INSERT INTO branches (organization_id, name, code, address, city, state, country, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+      `, [organizationId, data.name, data.code || data.name.slice(0, 3).toUpperCase(), data.address || '', data.city || '', data.state || '', data.country || 'India', data.isActive !== false]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'CREATE_BRANCH', entityType: 'BRANCH' as any, entityId: res.id, oldValues: null, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async updateBranch(organizationId: string, id: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM branches WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Branch not found');
+      const fields: string[] = []; const values: any[] = []; let idx = 1;
+      if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
+      if (data.code !== undefined) { fields.push(`code = $${idx++}`); values.push(data.code); }
+      if (data.address !== undefined) { fields.push(`address = $${idx++}`); values.push(data.address); }
+      if (data.city !== undefined) { fields.push(`city = $${idx++}`); values.push(data.city); }
+      if (data.state !== undefined) { fields.push(`state = $${idx++}`); values.push(data.state); }
+      if (data.country !== undefined) { fields.push(`country = $${idx++}`); values.push(data.country); }
+      if (data.isActive !== undefined) { fields.push(`is_active = $${idx++}`); values.push(data.isActive); }
+      if (fields.length === 0) { await client.commit(); return old; }
+      values.push(organizationId, id);
+      const res = await client.queryOne(`UPDATE branches SET ${fields.join(', ')} WHERE organization_id = $${idx} AND id = $${idx + 1} RETURNING *`, values);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'UPDATE_BRANCH', entityType: 'BRANCH' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async deleteBranch(organizationId: string, id: string, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM branches WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Branch not found');
+      const empCheck = await client.queryOne(`SELECT id FROM employees WHERE organization_id = $1 AND branch_id = $2 AND deleted_at IS NULL LIMIT 1`, [organizationId, id]);
+      if (empCheck) throw new Error('Cannot delete branch with active employees. Reassign employees first.');
+      const res = await client.queryOne(`UPDATE branches SET is_active = FALSE WHERE organization_id = $1 AND id = $2 RETURNING *`, [organizationId, id]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'DEACTIVATE_BRANCH', entityType: 'BRANCH' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  // --- DESIGNATIONS ---
+  async createDesignation(organizationId: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const res = await client.queryOne(`
+        INSERT INTO designations (organization_id, title, level, department_id)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `, [organizationId, data.title, data.level || 1, data.departmentId || null]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'CREATE_DESIGNATION', entityType: 'DESIGNATION' as any, entityId: res.id, oldValues: null, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async updateDesignation(organizationId: string, id: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM designations WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Designation not found');
+      const fields: string[] = []; const values: any[] = []; let idx = 1;
+      if (data.title !== undefined) { fields.push(`title = $${idx++}`); values.push(data.title); }
+      if (data.level !== undefined) { fields.push(`level = $${idx++}`); values.push(data.level); }
+      if (data.departmentId !== undefined) { fields.push(`department_id = $${idx++}`); values.push(data.departmentId || null); }
+      if (fields.length === 0) { await client.commit(); return old; }
+      values.push(organizationId, id);
+      const res = await client.queryOne(`UPDATE designations SET ${fields.join(', ')} WHERE organization_id = $${idx} AND id = $${idx + 1} RETURNING *`, values);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'UPDATE_DESIGNATION', entityType: 'DESIGNATION' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async deleteDesignation(organizationId: string, id: string, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT * FROM designations WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Designation not found');
+      const empCheck = await client.queryOne(`SELECT id FROM employees WHERE organization_id = $1 AND designation_id = $2 AND deleted_at IS NULL LIMIT 1`, [organizationId, id]);
+      if (empCheck) throw new Error('Cannot delete designation with active employees. Reassign employees first.');
+      const res = await client.queryOne(`DELETE FROM designations WHERE organization_id = $1 AND id = $2 RETURNING *`, [organizationId, id]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'DELETE_DESIGNATION', entityType: 'DESIGNATION' as any, entityId: id, oldValues: old, newValues: null, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  // --- TEAMS ---
+  async createTeam(organizationId: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const res = await client.queryOne(`
+        INSERT INTO teams (department_id, name, description)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `, [data.departmentId, data.name, data.description || '']);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'CREATE_TEAM', entityType: 'TEAM' as any, entityId: res.id, oldValues: null, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async updateTeam(organizationId: string, id: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT t.* FROM teams t JOIN departments d ON t.department_id = d.id WHERE d.organization_id = $1 AND t.id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Team not found');
+      const fields: string[] = []; const values: any[] = []; let idx = 1;
+      if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
+      if (data.description !== undefined) { fields.push(`description = $${idx++}`); values.push(data.description); }
+      if (data.departmentId !== undefined) { fields.push(`department_id = $${idx++}`); values.push(data.departmentId); }
+      if (fields.length === 0) { await client.commit(); return old; }
+      values.push(id);
+      const res = await client.queryOne(`UPDATE teams SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, values);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'UPDATE_TEAM', entityType: 'TEAM' as any, entityId: id, oldValues: old, newValues: res, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
+  }
+
+  async deleteTeam(organizationId: string, id: string, actorUserId?: string, ipAddress?: string, requestId?: string) {
+    const client = await beginTransaction();
+    try {
+      const old = await client.queryOne(`SELECT t.* FROM teams t JOIN departments d ON t.department_id = d.id WHERE d.organization_id = $1 AND t.id = $2`, [organizationId, id]);
+      if (!old) throw new Error('Team not found');
+      const res = await client.queryOne(`DELETE FROM teams WHERE id = $1 RETURNING *`, [id]);
+      await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'DELETE_TEAM', entityType: 'TEAM' as any, entityId: id, oldValues: old, newValues: null, ipAddress, requestId });
+      await client.commit();
+      return res;
+    } catch (e) { await client.rollback(); throw e; }
   }
 
   async getEmployees(organizationId: string, filters: any) {

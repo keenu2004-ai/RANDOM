@@ -37,6 +37,41 @@ leaveManagementRouter.post('/leaves/types', authenticateToken, requireRoles('SUP
   return res.status(201).json(newLeaveType);
 });
 
+// Update Leave Type
+leaveManagementRouter.put('/leaves/types/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const existing = await leaveRepository.getLeaveTypeById(req.user!.organizationId, req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Leave type not found' });
+
+    const { name, annualQuota, carryForwardAllowed, requiresAttachment, description, isActive } = req.body;
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const requestId = req.headers['x-request-id'] as string;
+
+    const updated = await leaveRepository.updateLeaveType(req.user!.organizationId, req.params.id, {
+      name, annualQuota: annualQuota !== undefined ? Number(annualQuota) : undefined,
+      carryForwardAllowed, requiresAttachment, description, isActive
+    }, req.user!.userId, ip, requestId);
+
+    return res.json(updated);
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+});
+
+// Deactivate Leave Type (soft delete - preserves balance history)
+leaveManagementRouter.delete('/leaves/types/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const existing = await leaveRepository.getLeaveTypeById(req.user!.organizationId, req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Leave type not found' });
+
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const updated = await leaveRepository.updateLeaveType(req.user!.organizationId, req.params.id, { isActive: false }, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json({ message: 'Leave type deactivated', id: updated?.id });
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+});
+
 // Get Leave Requests (With Enriched Employee & Leave Type Info)
 leaveManagementRouter.get('/leaves', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   let filters: any = {

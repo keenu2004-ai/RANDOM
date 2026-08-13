@@ -107,6 +107,58 @@ export const hrmsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateDepartment: (id: string, data: any) =>
+    apiFetch<any>(`/organization/departments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteDepartment: (id: string) =>
+    apiFetch<any>(`/organization/departments/${id}`, { method: 'DELETE' }),
+
+  // Branches
+  createBranch: (data: any) =>
+    apiFetch<any>('/organization/branches', { method: 'POST', body: JSON.stringify(data) }),
+  updateBranch: (id: string, data: any) =>
+    apiFetch<any>(`/organization/branches/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBranch: (id: string) =>
+    apiFetch<any>(`/organization/branches/${id}`, { method: 'DELETE' }),
+
+  // Designations
+  createDesignation: (data: any) =>
+    apiFetch<any>('/organization/designations', { method: 'POST', body: JSON.stringify(data) }),
+  updateDesignation: (id: string, data: any) =>
+    apiFetch<any>(`/organization/designations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDesignation: (id: string) =>
+    apiFetch<any>(`/organization/designations/${id}`, { method: 'DELETE' }),
+
+  // Teams
+  createTeam: (data: any) =>
+    apiFetch<any>('/organization/teams', { method: 'POST', body: JSON.stringify(data) }),
+  updateTeam: (id: string, data: any) =>
+    apiFetch<any>(`/organization/teams/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTeam: (id: string) =>
+    apiFetch<any>(`/organization/teams/${id}`, { method: 'DELETE' }),
+
+  // Attendance Locations
+  getAttendanceLocations: () => apiFetch<any[]>('/attendance-locations'),
+  createAttendanceLocation: (data: any) =>
+    apiFetch<any>('/attendance-locations', { method: 'POST', body: JSON.stringify(data) }),
+  updateAttendanceLocation: (id: string, data: any) =>
+    apiFetch<any>(`/attendance-locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAttendanceLocation: (id: string) =>
+    apiFetch<any>(`/attendance-locations/${id}`, { method: 'DELETE' }),
+
+  // Leave Types (update + deactivate)
+  updateLeaveType: (id: string, data: any) =>
+    apiFetch<any>(`/leaves/types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLeaveType: (id: string) =>
+    apiFetch<any>(`/leaves/types/${id}`, { method: 'DELETE' }),
+
+  // Expense Categories (update + deactivate)
+  updateExpenseCategory: (id: string, data: any) =>
+    apiFetch<any>(`/expenses/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExpenseCategory: (id: string) =>
+    apiFetch<any>(`/expenses/categories/${id}`, { method: 'DELETE' }),
 
   // Employees
   getEmployees: (params?: Record<string, string>) => {

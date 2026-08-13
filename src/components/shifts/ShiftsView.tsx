@@ -38,6 +38,7 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [attendanceLocations, setAttendanceLocations] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,8 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
     breakDurationMinutes: 60,
     workingHours: 8.0,
     weekOffs: ['SATURDAY', 'SUNDAY'] as string[],
-    active: true
+    active: true,
+    locationId: '' as string
   });
 
   // Assign Single Modal
@@ -92,11 +94,12 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
     try {
       setLoading(true);
       setError(null);
-      const [shiftsData, historyData, empData, metaData] = await Promise.all([
+      const [shiftsData, historyData, empData, metaData, locsData] = await Promise.all([
         hrmsApi.getShifts(),
         hrmsApi.getShiftAssignmentHistory().catch(() => []),
         hrmsApi.getEmployees(),
-        hrmsApi.getOrganizationMeta().catch(() => ({ departments: [], branches: [] }))
+        hrmsApi.getOrganizationMeta().catch(() => ({ departments: [], branches: [] })),
+        hrmsApi.getAttendanceLocations().catch(() => [])
       ]);
 
       setShifts(shiftsData);
@@ -104,6 +107,7 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
       setEmployees(empData.employees || empData);
       setDepartments(metaData.departments || []);
       setBranches(metaData.branches || []);
+      setAttendanceLocations(locsData || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load shift management data');
     } finally {
@@ -121,7 +125,8 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
       breakDurationMinutes: 60,
       workingHours: 8.0,
       weekOffs: ['SATURDAY', 'SUNDAY'],
-      active: true
+      active: true,
+      locationId: ''
     });
     setIsShiftModalOpen(true);
   };
@@ -136,7 +141,8 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
       breakDurationMinutes: s.breakDurationMinutes,
       workingHours: s.workingHours,
       weekOffs: s.weekOffs || ['SATURDAY', 'SUNDAY'],
-      active: s.active
+      active: s.active,
+      locationId: (s as any).locationId || ''
     });
     setIsShiftModalOpen(true);
   };
@@ -633,6 +639,25 @@ export const ShiftsView: React.FC<ShiftsViewProps> = ({ userRole }) => {
               </div>
 
               {/* Week-off Configuration */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">Attendance Location</label>
+                <select
+                  value={shiftFormData.locationId}
+                  onChange={e => setShiftFormData({ ...shiftFormData, locationId: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-hidden focus:border-blue-500 font-medium"
+                >
+                  <option value="">— No Location Assigned —</option>
+                  {attendanceLocations.map((loc: any) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name} ({Number(loc.latitude).toFixed(4)}, {Number(loc.longitude).toFixed(4)}) R:{loc.radiusMeters}m
+                    </option>
+                  ))}
+                </select>
+                {!shiftFormData.locationId && (
+                  <p className="text-xs text-amber-600 mt-1">⚠️ No location means GPS enforcement is skipped for this shift.</p>
+                )}
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1.5">Week-off Days</label>
                 <div className="flex flex-wrap gap-1.5">

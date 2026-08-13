@@ -10,14 +10,134 @@ organizationMetaEmployeeManagementRouter.get('/organization/meta', authenticateT
   return res.json(meta);
 });
 
+// --- DEPARTMENTS ---
 organizationMetaEmployeeManagementRouter.post('/organization/departments', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const dept = await employeeRepository.createDepartment(req.user!.organizationId, req.body);
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const dept = await employeeRepository.createDepartment(req.user!.organizationId, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
     return res.json(dept);
   } catch (error: any) {
     return res.status(400).json({ error: error.message });
   }
 });
+
+organizationMetaEmployeeManagementRouter.put('/organization/departments/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const dept = await employeeRepository.updateDepartment(req.user!.organizationId, req.params.id, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json(dept);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.delete('/organization/departments/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const dept = await employeeRepository.deleteDepartment(req.user!.organizationId, req.params.id, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json({ message: 'Department deleted', id: dept?.id });
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// --- BRANCHES ---
+organizationMetaEmployeeManagementRouter.post('/organization/branches', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.body.name) return res.status(400).json({ error: 'Branch name is required' });
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const branch = await employeeRepository.createBranch(req.user!.organizationId, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.status(201).json(branch);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.put('/organization/branches/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const branch = await employeeRepository.updateBranch(req.user!.organizationId, req.params.id, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json(branch);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.delete('/organization/branches/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const branch = await employeeRepository.deleteBranch(req.user!.organizationId, req.params.id, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json({ message: 'Branch deactivated', id: branch?.id });
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// --- DESIGNATIONS ---
+organizationMetaEmployeeManagementRouter.post('/organization/designations', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.body.title) return res.status(400).json({ error: 'Designation title is required' });
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const des = await employeeRepository.createDesignation(req.user!.organizationId, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.status(201).json(des);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.put('/organization/designations/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const des = await employeeRepository.updateDesignation(req.user!.organizationId, req.params.id, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json(des);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.delete('/organization/designations/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const des = await employeeRepository.deleteDesignation(req.user!.organizationId, req.params.id, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json({ message: 'Designation deleted', id: des?.id });
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+// --- TEAMS ---
+organizationMetaEmployeeManagementRouter.post('/organization/teams', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.body.name || !req.body.departmentId) return res.status(400).json({ error: 'Team name and departmentId are required' });
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const team = await employeeRepository.createTeam(req.user!.organizationId, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.status(201).json(team);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.put('/organization/teams/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const team = await employeeRepository.updateTeam(req.user!.organizationId, req.params.id, req.body, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json(team);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+organizationMetaEmployeeManagementRouter.delete('/organization/teams/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+    const team = await employeeRepository.deleteTeam(req.user!.organizationId, req.params.id, req.user!.userId, ip, req.headers['x-request-id'] as string);
+    return res.json({ message: 'Team deleted', id: team?.id });
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+
 
 organizationMetaEmployeeManagementRouter.get('/employees', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   let filters: any = { ...req.query };

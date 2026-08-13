@@ -102,6 +102,11 @@ export const hrmsApi = {
 
   // Organization Meta
   getOrganizationMeta: () => apiFetch<any>('/organization/meta'),
+  createDepartment: (data: any) => 
+    apiFetch<any>('/organization/departments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Employees
   getEmployees: (params?: Record<string, string>) => {

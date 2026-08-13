@@ -30,6 +30,15 @@ export class EmployeeRepository {
     };
   }
 
+  async createDepartment(organizationId: string, data: any) {
+    const res = await queryOne(`
+      INSERT INTO departments (organization_id, branch_id, name, code, description)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [organizationId, data.branchId || null, data.name, data.code, data.description || '']);
+    return res;
+  }
+
   async getEmployees(organizationId: string, filters: any) {
     let sql = `SELECT * FROM employees WHERE organization_id = $1`;
     const params: any[] = [organizationId];

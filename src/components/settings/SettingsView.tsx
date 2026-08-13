@@ -5,8 +5,11 @@ import { OrganizationSettings } from '../../types/hrms';
 
 export const SettingsView: React.FC = () => {
   const [settings, setSettings] = useState<OrganizationSettings | null>(null);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
+  const [deptForm, setDeptForm] = useState({ name: '', code: '' });
+  const [creatingDept, setCreatingDept] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -15,8 +18,12 @@ export const SettingsView: React.FC = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await hrmsApi.getOrgSettings();
+      const [data, meta] = await Promise.all([
+        hrmsApi.getOrgSettings(),
+        hrmsApi.getOrganizationMeta()
+      ]);
       setSettings(data);
+      if (meta && meta.departments) setDepartments(meta.departments);
     } catch (err: any) {
       console.error(err);
     } finally {
@@ -33,6 +40,20 @@ export const SettingsView: React.FC = () => {
       alert('Organization & GPS Geofence parameters updated successfully!');
     } catch (err: any) {
       alert(err.message || 'Failed to save settings');
+    }
+  };
+
+  const handleAddDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingDept(true);
+    try {
+      await hrmsApi.createDepartment(deptForm);
+      setDeptForm({ name: '', code: '' });
+      await loadSettings();
+    } catch (err: any) {
+      alert(err.message || 'Failed to add department');
+    } finally {
+      setCreatingDept(false);
     }
   };
 
@@ -155,7 +176,43 @@ export const SettingsView: React.FC = () => {
           </div>
         </form>
 
-        {/* Database Maintenance */}
+        <div className="space-y-6">
+          {/* Departments */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">Departments</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {departments.map(d => (
+                <div key={d.id} className="text-xs bg-slate-50 p-2 rounded border border-slate-200 font-medium flex justify-between">
+                  <span>{d.name}</span>
+                  <span className="text-slate-500">{d.code}</span>
+                </div>
+              ))}
+              {departments.length === 0 && <div className="text-xs text-slate-500">No departments added.</div>}
+            </div>
+            <form onSubmit={handleAddDepartment} className="space-y-3 pt-3 border-t border-slate-100">
+              <input
+                type="text"
+                placeholder="Department Name"
+                required
+                value={deptForm.name}
+                onChange={e => setDeptForm({ ...deptForm, name: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Code (e.g. ENG)"
+                required
+                value={deptForm.code}
+                onChange={e => setDeptForm({ ...deptForm, code: e.target.value })}
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg uppercase"
+              />
+              <button type="submit" disabled={creatingDept} className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all">
+                {creatingDept ? 'Adding...' : 'Add Department'}
+              </button>
+            </form>
+          </div>
+
+          {/* Database Maintenance */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
             <Database className="w-4 h-4 text-purple-600" />

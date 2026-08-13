@@ -10,6 +10,15 @@ organizationMetaEmployeeManagementRouter.get('/organization/meta', authenticateT
   return res.json(meta);
 });
 
+organizationMetaEmployeeManagementRouter.post('/organization/departments', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const dept = await employeeRepository.createDepartment(req.user!.organizationId, req.body);
+    return res.json(dept);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 organizationMetaEmployeeManagementRouter.get('/employees', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   let filters: any = { ...req.query };
   const canSeeDeleted = ['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'].includes(req.user!.role);

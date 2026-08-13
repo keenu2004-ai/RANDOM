@@ -1,4 +1,5 @@
 import { query, queryOne, beginTransaction } from '../db/client';
+import { logMasterDataChangeTx } from '../utils/audit-logger';
 
 export class EmployeeRepository {
   async getOrganizationMeta(organizationId: string) {
@@ -198,6 +199,15 @@ export class EmployeeRepository {
         `, [emp.id, lt.id, currentYear, lt.annual_quota]);
       }
 
+      await logMasterDataChangeTx(client, {
+        organizationId,
+        action: 'CREATE_EMPLOYEE',
+        entityType: 'EMPLOYEE' as any,
+        entityId: emp.id,
+        oldValues: null,
+        newValues: emp
+      });
+
       await client.commit();
       return this.mapEmployeeRow(emp, true);
     } catch (e) {
@@ -276,6 +286,16 @@ export class EmployeeRepository {
         if (data.email && emp) {
           await client.queryOne(`UPDATE users SET email = $1 WHERE id = $2`, [data.email.toLowerCase().trim(), emp.user_id]);
         }
+
+        await logMasterDataChangeTx(client, {
+          organizationId,
+          action: 'UPDATE_EMPLOYEE',
+          entityType: 'EMPLOYEE' as any,
+          entityId: id,
+          oldValues: existing,
+          newValues: emp
+        });
+
         await client.commit();
         return this.mapEmployeeRow(emp, true);
       }
@@ -290,9 +310,20 @@ export class EmployeeRepository {
   async softDeleteEmployee(organizationId: string, id: string) {
     const client = await beginTransaction();
     try {
+      const existing = await client.queryOne(`SELECT * FROM employees WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
       const emp = await client.queryOne(`UPDATE employees SET deleted_at = NOW(), status = 'INACTIVE', updated_at = NOW() WHERE organization_id = $1 AND id = $2 RETURNING *`, [organizationId, id]);
       if (!emp) throw new Error('Employee record not found');
       await client.queryOne(`UPDATE users SET updated_at = NOW(), is_active = FALSE WHERE id = $1`, [emp.user_id]);
+
+      await logMasterDataChangeTx(client, {
+        organizationId,
+        action: 'DELETE_EMPLOYEE',
+        entityType: 'EMPLOYEE' as any,
+        entityId: id,
+        oldValues: existing,
+        newValues: emp
+      });
+
       await client.commit();
       return this.mapEmployeeRow(emp, true);
     } catch (e) {
@@ -304,9 +335,20 @@ export class EmployeeRepository {
   async restoreEmployee(organizationId: string, id: string) {
     const client = await beginTransaction();
     try {
+      const existing = await client.queryOne(`SELECT * FROM employees WHERE organization_id = $1 AND id = $2`, [organizationId, id]);
       const emp = await client.queryOne(`UPDATE employees SET deleted_at = NULL, status = 'ACTIVE', updated_at = NOW() WHERE organization_id = $1 AND id = $2 RETURNING *`, [organizationId, id]);
       if (!emp) throw new Error('Employee record not found');
       await client.queryOne(`UPDATE users SET updated_at = NOW(), is_active = TRUE WHERE id = $1`, [emp.user_id]);
+
+      await logMasterDataChangeTx(client, {
+        organizationId,
+        action: 'RESTORE_EMPLOYEE',
+        entityType: 'EMPLOYEE' as any,
+        entityId: id,
+        oldValues: existing,
+        newValues: emp
+      });
+
       await client.commit();
       return this.mapEmployeeRow(emp, true);
     } catch (e) {

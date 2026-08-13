@@ -104,45 +104,77 @@ holidaysShiftsRouter.post('/shifts', authenticateToken, requireRoles('SUPER_ADMI
     calculatedHours = Number(Math.max(0, diffMins / 60).toFixed(1));
   }
 
-  const newShift = await holidayShiftRepository.createShift(req.user!.organizationId, {
-    name: name.trim(),
-    startTime,
-    endTime,
-    gracePeriodMinutes: grace,
-    breakDurationMinutes: breakDur,
-    workingHours: calculatedHours,
-    weekOffs: Array.isArray(weekOffs) ? weekOffs : ['SATURDAY', 'SUNDAY'],
-    active: active !== false,
-  });
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
+  const newShift = await holidayShiftRepository.createShift(
+    req.user!.organizationId, 
+    {
+      name: name.trim(),
+      startTime,
+      endTime,
+      gracePeriodMinutes: grace,
+      breakDurationMinutes: breakDur,
+      workingHours: calculatedHours,
+      weekOffs: Array.isArray(weekOffs) ? weekOffs : ['SATURDAY', 'SUNDAY'],
+      active: active !== false,
+      locationId: req.body.locationId
+    },
+    req.user!.userId,
+    ip,
+    requestId
+  );
 
   return res.status(201).json(newShift);
 });
 
 // Edit Shift
 holidaysShiftsRouter.put('/shifts/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
   const shift = await holidayShiftRepository.getShiftById(req.user!.organizationId, req.params.id);
   if (!shift) {
     return res.status(404).json({ error: 'Shift not found' });
   }
 
-  const updatedShift = await holidayShiftRepository.updateShift(req.user!.organizationId, req.params.id, req.body);
+  const updatedShift = await holidayShiftRepository.updateShift(
+    req.user!.organizationId, 
+    req.params.id, 
+    req.body,
+    req.user!.userId,
+    ip,
+    requestId
+  );
   return res.json(updatedShift);
 });
 
 // Deactivate / Activate Shift
 holidaysShiftsRouter.patch('/shifts/:id/status', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
   const shift = await holidayShiftRepository.getShiftById(req.user!.organizationId, req.params.id);
   if (!shift) {
     return res.status(404).json({ error: 'Shift not found' });
   }
 
-  const updatedShift = await holidayShiftRepository.updateShift(req.user!.organizationId, req.params.id, { active: Boolean(req.body.active) });
+  const updatedShift = await holidayShiftRepository.updateShift(
+    req.user!.organizationId, 
+    req.params.id, 
+    { active: Boolean(req.body.active) },
+    req.user!.userId,
+    ip,
+    requestId
+  );
   return res.json(updatedShift);
 });
 
 // Single Employee Shift Assignment
 holidaysShiftsRouter.post('/shifts/assign', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
   const { employeeId, shiftId, reason } = req.body;
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
 
   if (!employeeId || !shiftId) {
     return res.status(400).json({ error: 'Employee ID and Shift ID are required.' });
@@ -156,12 +188,17 @@ holidaysShiftsRouter.post('/shifts/assign', authenticateToken, requireRoles('SUP
   }
 
   try {
-    const result = await holidayShiftRepository.assignShiftSingle(req.user!.organizationId, employeeId, shiftId, reason || 'Individual Shift Assignment', req.user!.employeeId || req.user!.userId, req.user!.employeeName || 'Admin');
-    
-    await query(`
-        INSERT INTO audit_logs (organization_id, user_id, user_email, user_role, action, module, details)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [req.user!.organizationId, req.user!.userId, req.user!.email, req.user!.role, 'ASSIGN_SHIFT', 'SHIFT', `Assigned shift ${result.assignment.shiftName} to employee ${result.employee.employee_code}`]);
+    const result = await holidayShiftRepository.assignShiftSingle(
+      req.user!.organizationId, 
+      employeeId, 
+      shiftId, 
+      reason || 'Individual Shift Assignment', 
+      req.user!.employeeId || req.user!.userId, 
+      req.user!.employeeName || 'Admin',
+      req.user!.userId,
+      ip,
+      requestId
+    );
 
     return res.json({ message: `Shift assigned successfully.`, employee: result.employee, assignment: result.assignment });
   } catch (err: any) {
@@ -172,6 +209,8 @@ holidaysShiftsRouter.post('/shifts/assign', authenticateToken, requireRoles('SUP
 // Bulk Shift Assignment
 holidaysShiftsRouter.post('/shifts/bulk-assign', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
   const { shiftId, employeeIds, departmentId, branchId, reason } = req.body;
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
 
   if (!shiftId) {
     return res.status(400).json({ error: 'Shift ID is required.' });
@@ -192,12 +231,17 @@ holidaysShiftsRouter.post('/shifts/bulk-assign', authenticateToken, requireRoles
     return res.status(400).json({ error: 'No matching employees found for shift assignment.' });
   }
 
-  await holidayShiftRepository.assignShiftBulk(req.user!.organizationId, targetEmployees, shift, reason || 'Bulk Shift Assignment', req.user!.employeeId || req.user!.userId, req.user!.employeeName || 'Admin');
-
-  await query(`
-      INSERT INTO audit_logs (organization_id, user_id, user_email, user_role, action, module, details)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-  `, [req.user!.organizationId, req.user!.userId, req.user!.email, req.user!.role, 'ASSIGN_SHIFT_BULK', 'SHIFT', `Assigned shift ${shift.name} to ${targetEmployees.length} employees`]);
+  await holidayShiftRepository.assignShiftBulk(
+    req.user!.organizationId, 
+    targetEmployees, 
+    shift, 
+    reason || 'Bulk Shift Assignment', 
+    req.user!.employeeId || req.user!.userId, 
+    req.user!.employeeName || 'Admin',
+    req.user!.userId,
+    ip,
+    requestId
+  );
 
   return res.json({
     message: `Shift '${shift.name}' successfully assigned to ${targetEmployees.length} employees.`,
@@ -216,4 +260,66 @@ holidaysShiftsRouter.get('/shifts/history', authenticateToken, async (req: Authe
     history = history.filter(h => teamIds.includes(h.employeeId));
   }
   return res.json(history);
+});
+
+// --- ATTENDANCE LOCATIONS ENDPOINTS ---
+holidaysShiftsRouter.get('/attendance-locations', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  const locations = await holidayShiftRepository.getAllLocations(req.user!.organizationId);
+  return res.json(locations);
+});
+
+holidaysShiftsRouter.post('/attendance-locations', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const { name, latitude, longitude, radiusMeters, branchId, isActive } = req.body;
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
+  if (!name || latitude == null || longitude == null) {
+    return res.status(400).json({ error: 'Location Name, Latitude, and Longitude are required.' });
+  }
+
+  const loc = await holidayShiftRepository.createLocation(
+    req.user!.organizationId,
+    { name, latitude, longitude, radiusMeters, branchId, isActive },
+    req.user!.userId,
+    ip,
+    requestId
+  );
+  return res.status(201).json(loc);
+});
+
+holidaysShiftsRouter.put('/attendance-locations/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
+  try {
+    const loc = await holidayShiftRepository.updateLocation(
+      req.user!.organizationId,
+      req.params.id,
+      req.body,
+      req.user!.userId,
+      ip,
+      requestId
+    );
+    return res.json(loc);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+holidaysShiftsRouter.delete('/attendance-locations/:id', authenticateToken, requireRoles('SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'), async (req: AuthenticatedRequest, res: Response) => {
+  const ip = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const requestId = (req.headers['x-request-id'] as string) || null;
+
+  try {
+    const result = await holidayShiftRepository.deleteLocation(
+      req.user!.organizationId,
+      req.params.id,
+      req.user!.userId,
+      ip,
+      requestId
+    );
+    return res.json({ message: 'Attendance location deleted successfully', location: result });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
 });

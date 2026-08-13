@@ -1,5 +1,6 @@
 import { query, queryOne, beginTransaction } from '../db/client';
 import { notificationService } from '../services/notification.service';
+import { logMasterDataChangeTx } from '../utils/audit-logger';
 
 export class ExpenseRepository {
   // Paginated list with org isolation + role scoping
@@ -128,6 +129,15 @@ export class ExpenseRepository {
   async createExpense(organizationId: string, exp: any) {
     const client = await beginTransaction();
     try {
+      const cat = await client.queryOne<any>(`
+        SELECT * FROM expense_categories 
+        WHERE organization_id = $1 AND id = $2 AND is_active = true AND deleted_at IS NULL
+      `, [organizationId, exp.categoryId]);
+
+      if (!cat) {
+        throw new Error('EXPENSE_CATEGORY_INACTIVE: The selected expense category is inactive, deleted, or invalid.');
+      }
+
       const res = await client.queryOne<any>(`
         INSERT INTO expenses (id, organization_id, employee_id, category_id, title, amount_inr, expense_date, description, receipt_url, receipt_name, receipt_id, status, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
@@ -142,6 +152,15 @@ export class ExpenseRepository {
         entityId: exp.id,
         priority: 'NORMAL'
       }, client);
+
+      await logMasterDataChangeTx(client, {
+        organizationId,
+        action: 'EXPENSE_SUBMITTED',
+        entityType: 'ORGANIZATION' as any,
+        entityId: exp.id,
+        oldValues: null,
+        newValues: res
+      });
 
       await client.commit();
       return res;
@@ -190,6 +209,16 @@ export class ExpenseRepository {
         priority: 'HIGH'
       }, client);
 
+      await logMasterDataChangeTx(client, {
+        organizationId: orgId,
+        actorUserId: reviewerId,
+        action: 'EXPENSE_APPROVED',
+        entityType: 'ORGANIZATION' as any,
+        entityId: expId,
+        oldValues: exp,
+        newValues: updated
+      });
+
       await client.commit();
       return updated;
     } catch (err) {
@@ -225,6 +254,16 @@ export class ExpenseRepository {
         priority: 'HIGH'
       }, client);
 
+      await logMasterDataChangeTx(client, {
+        organizationId: orgId,
+        actorUserId: reviewerId,
+        action: 'EXPENSE_REJECTED',
+        entityType: 'ORGANIZATION' as any,
+        entityId: expId,
+        oldValues: exp,
+        newValues: updated
+      });
+
       await client.commit();
       return updated;
     } catch (err) {
@@ -246,6 +285,16 @@ export class ExpenseRepository {
         RETURNING *
       `, [orgId, expId]);
       if (!updated) { await client.rollback(); throw new Error('Expense was already reimbursed'); }
+
+      await logMasterDataChangeTx(client, {
+        organizationId: orgId,
+        action: 'EXPENSE_REIMBURSED',
+        entityType: 'ORGANIZATION' as any,
+        entityId: expId,
+        oldValues: exp,
+        newValues: updated
+      });
+
       await client.commit();
       return updated;
     } catch (err) {

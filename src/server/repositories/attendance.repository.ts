@@ -107,62 +107,110 @@ export class AttendanceRepository {
   async createAttendance(organizationId: string, att: any, userId: string, userEmail: string, userRole: string) {
     const client = await beginTransaction();
     try {
-      const serverTimeRes = await client.query('SELECT CURRENT_TIMESTAMP as now, CURRENT_DATE as date');
-      const now = serverTimeRes[0].now;
-      const date = serverTimeRes[0].date;
+      const serverTimeRes = await client.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' as now_utc, CURRENT_DATE as date");
+      const dbDate = serverTimeRes[0].date;
+      const now = new Date();
 
-      const dupRes = await client.query('SELECT id FROM attendance WHERE employee_id = $1 AND date = $2', [att.employeeId, date]);
+      const dupRes = await client.query('SELECT id FROM attendance WHERE employee_id = $1 AND date = $2', [att.employeeId, dbDate]);
       if (dupRes.length > 0) throw new Error('Duplicate check-in');
 
-      if (att.accuracy > 500) throw new Error('GPS accuracy is too low (>500m)');
+      if (att.accuracy == null || att.accuracy > 500) throw new Error('INVALID_GPS_COORDINATES: GPS accuracy is too low or missing.');
+      if (att.latitude == null || att.longitude == null) throw new Error('INVALID_GPS_COORDINATES: Coordinates missing.');
 
-      const empRes = await client.query(`
-          SELECT e.branch_id, bl.latitude, bl.longitude, bl.radius_meters 
-          FROM employees e 
-          LEFT JOIN attendance_locations bl ON e.branch_id = bl.branch_id
-          WHERE e.id = $1 AND e.organization_id = $2
-      `, [att.employeeId, organizationId]);
+      const contextRes = await client.query(`
+        SELECT 
+          s.id as shift_id, s.name as shift_name, s.start_time, s.end_time, s.grace_period_minutes,
+          l.id as location_id, l.name as location_name, l.latitude, l.longitude, l.radius_meters, l.organization_id as loc_org,
+          l.is_active as loc_is_active, l.deleted_at as loc_deleted_at,
+          COALESCE(o.timezone, 'Asia/Kolkata') as org_timezone
+        FROM employee_shifts es
+        JOIN shifts s ON es.shift_id = s.id
+        LEFT JOIN attendance_locations l ON s.location_id = l.id
+        LEFT JOIN organizations o ON o.id = $3
+        WHERE es.employee_id = $1 
+          AND es.effective_from <= $2 
+          AND (es.effective_to IS NULL OR es.effective_to >= $2)
+        ORDER BY es.created_at DESC LIMIT 1
+      `, [att.employeeId, dbDate, organizationId]);
 
-      if (empRes.length === 0) throw new Error('Employee not found');
-      const emp = empRes[0];
-
-      if (emp.latitude != null && emp.longitude != null) {
-        const dist = getHaversineDistance(att.latitude, att.longitude, parseFloat(emp.latitude), parseFloat(emp.longitude));
-        const radius = emp.radius_meters || 200;
-        if (dist > radius) {
-          throw new Error('Geofence error: Outside of allowed branch radius');
-        }
+      if (contextRes.length === 0) {
+        throw new Error('SHIFT_NOT_ASSIGNED: No active shift is assigned to this employee.');
       }
 
-      let status = 'PRESENT';
-      const shift = await this.getShift(att.employeeId);
-      if (shift && shift.startTime) {
-        const checkInDate = new Date(now);
-        const [hours, minutes] = shift.startTime.split(':').map(Number);
-        const shiftStart = new Date(now);
-        shiftStart.setHours(hours, minutes, 0, 0);
-        const graceMs = (shift.gracePeriodMinutes || 0) * 60 * 1000;
+      const ctx = contextRes[0];
+      
+      if (!ctx.location_id) {
+        throw new Error('SHIFT_LOCATION_NOT_CONFIGURED: The assigned shift does not have an attendance location configured.');
+      }
 
-        if (checkInDate.getTime() > shiftStart.getTime() + graceMs) {
+      if (ctx.loc_is_active === false || ctx.loc_deleted_at != null) {
+        throw new Error('ATTENDANCE_LOCATION_INACTIVE: The assigned attendance location is inactive or deleted.');
+      }
+      
+      if (ctx.loc_org !== organizationId) {
+        throw new Error('ORGANIZATION_MISMATCH: Location belongs to a different organization.');
+      }
+      
+      if (ctx.latitude == null || ctx.longitude == null || ctx.radius_meters == null || ctx.radius_meters <= 0 || 
+          ctx.latitude < -90 || ctx.latitude > 90 || ctx.longitude < -180 || ctx.longitude > 180) {
+        throw new Error('INVALID_ATTENDANCE_LOCATION_CONFIGURATION: The location coordinates or radius are invalid.');
+      }
+
+      const dist = getHaversineDistance(att.latitude, att.longitude, parseFloat(ctx.latitude), parseFloat(ctx.longitude));
+      const insideGeofence = dist <= ctx.radius_meters;
+      
+      if (!insideGeofence) {
+        throw new Error('Geofence error: Outside of allowed shift location radius');
+      }
+
+      const orgTimezone = ctx.org_timezone || 'Asia/Kolkata';
+
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: orgTimezone,
+        hour12: false,
+        hour: '2-digit', minute: '2-digit'
+      });
+      const parts = formatter.formatToParts(now);
+      const partMap: Record<string, string> = {};
+      for (const p of parts) {
+        partMap[p.type] = p.value;
+      }
+      const currentMinutesFromMidnight = (parseInt(partMap.hour, 10) % 24) * 60 + parseInt(partMap.minute, 10);
+
+      let status = 'PRESENT';
+      if (ctx.start_time) {
+        const [hours, minutes] = ctx.start_time.split(':').map(Number);
+        const shiftStartMinutes = hours * 60 + minutes;
+        const graceMinutes = ctx.grace_period_minutes || 0;
+
+        if (currentMinutesFromMidnight > shiftStartMinutes + graceMinutes) {
           status = 'LATE';
         }
       }
 
+      const contextSnapshot = {
+        captured_at: new Date().toISOString(),
+        shift: { id: ctx.shift_id, name: ctx.shift_name, start_time: ctx.start_time, end_time: ctx.end_time, grace_period_minutes: ctx.grace_period_minutes, timezone: orgTimezone },
+        location: { id: ctx.location_id, name: ctx.location_name, latitude: ctx.latitude, longitude: ctx.longitude, radius_meters: ctx.radius_meters },
+        gps: { latitude: att.latitude, longitude: att.longitude, accuracy_meters: att.accuracy },
+        validation: { distance_meters: Math.round(dist), inside_geofence: insideGeofence, status }
+      };
+
       const insRes = await client.query(`
           INSERT INTO attendance 
-          (employee_id, date, check_in, check_in_location, check_in_latitude, check_in_longitude, check_in_accuracy, status) 
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          (employee_id, date, check_in, check_in_location, check_in_latitude, check_in_longitude, check_in_accuracy, status, context_snapshot) 
+          VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7, $8)
           RETURNING *
-      `, [att.employeeId, date, now, att.address, att.latitude, att.longitude, att.accuracy, status]);
+      `, [att.employeeId, dbDate, att.address, att.latitude, att.longitude, att.accuracy, status, JSON.stringify(contextSnapshot)]);
 
       await client.query(`
           INSERT INTO audit_logs (organization_id, user_id, user_email, user_role, action, module, details)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `, [organizationId, userId, userEmail, userRole, 'CHECK_IN', 'ATTENDANCE', `Checked in at ${now}`]);
+      `, [organizationId, userId, userEmail, userRole, 'CHECK_IN', 'ATTENDANCE', `Checked in successfully under shift ${ctx.shift_name}`]);
 
       await client.commit();
       return insRes[0];
-    } catch (e) {
+    } catch (e: any) {
       await client.rollback();
       throw e;
     }

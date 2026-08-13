@@ -154,19 +154,21 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
         pos => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-          setCoords({ latitude: lat, longitude: lng });
+          const accuracy = pos.coords.accuracy;
+          setCoords({ latitude: lat, longitude: lng, accuracy });
           setGpsAddress(`GPS: ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E (Device Location)`);
         },
         err => {
-          setGpsError('GPS permission denied or unavailable. Using default HQ location.');
-          setCoords({ latitude: 28.6209, longitude: 77.1363 });
-          setGpsAddress('Bengaluru Tech Park HQ (Geofence Verified)');
+          setGpsError('GPS permission denied or unavailable. Attendance check-in requires a valid device location.');
+          setCoords(null);
+          setGpsAddress('Location Unavailable');
         },
         { enableHighAccuracy: true, timeout: 8000 }
       );
     } else {
-      setCoords({ latitude: 28.6209, longitude: 77.1363 });
-      setGpsAddress('Bengaluru Tech Park HQ (Default)');
+      setGpsError('Geolocation is not supported by your browser.');
+      setCoords(null);
+      setGpsAddress('Location Unavailable');
     }
   };
 
@@ -175,15 +177,19 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
 
   // Mobile Handlers calling Express Backend API directly
   const handleGpsCheckIn = async () => {
+    if (!coords || coords.latitude == null || coords.longitude == null) {
+      setStatusMsg({ text: 'GPS location is required to check in.', type: 'error' });
+      return;
+    }
+    
     try {
       setLoading(true);
       setStatusMsg(null);
-      const lat = coords?.latitude || 28.6209;
-      const lng = coords?.longitude || 77.1363;
-
+      
       await hrmsApi.checkIn({
-        latitude: lat,
-        longitude: lng,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy || 10,
         address: gpsAddress
       });
 
@@ -198,15 +204,19 @@ export const MobileAppSimulator: React.FC<MobileAppSimulatorProps> = ({
   };
 
   const handleGpsCheckOut = async () => {
+    if (!coords || coords.latitude == null || coords.longitude == null) {
+      setStatusMsg({ text: 'GPS location is required to check out.', type: 'error' });
+      return;
+    }
+    
     try {
       setLoading(true);
       setStatusMsg(null);
-      const lat = coords?.latitude || 28.6209;
-      const lng = coords?.longitude || 77.1363;
-
+      
       await hrmsApi.checkOut({
-        latitude: lat,
-        longitude: lng,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy || 10,
         address: gpsAddress
       });
 

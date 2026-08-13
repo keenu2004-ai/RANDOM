@@ -69,9 +69,20 @@ attendanceRealGpsGeofencingRouter.post('/attendance/check-in', authenticateToken
     
     return res.status(201).json(record);
   } catch (error: any) {
-    if (error.message.includes('Duplicate check-in')) return res.status(409).json({ error: error.message });
-    if (error.message.includes('Geofence error') || error.message.includes('GPS accuracy')) return res.status(403).json({ error: error.message });
-    return res.status(400).json({ error: error.message });
+    const msg = error.message || '';
+    
+    // Structured config errors requested by User
+    if (msg.startsWith('SHIFT_NOT_ASSIGNED:')) return res.status(400).json({ code: 'SHIFT_NOT_ASSIGNED', message: msg.replace('SHIFT_NOT_ASSIGNED: ', '') });
+    if (msg.startsWith('SHIFT_LOCATION_NOT_CONFIGURED:')) return res.status(400).json({ code: 'SHIFT_LOCATION_NOT_CONFIGURED', message: msg.replace('SHIFT_LOCATION_NOT_CONFIGURED: ', '') });
+    if (msg.startsWith('ATTENDANCE_LOCATION_INACTIVE:')) return res.status(400).json({ code: 'ATTENDANCE_LOCATION_INACTIVE', message: msg.replace('ATTENDANCE_LOCATION_INACTIVE: ', '') });
+    if (msg.startsWith('INVALID_ATTENDANCE_LOCATION_CONFIGURATION:')) return res.status(400).json({ code: 'INVALID_ATTENDANCE_LOCATION_CONFIGURATION', message: msg.replace('INVALID_ATTENDANCE_LOCATION_CONFIGURATION: ', '') });
+    if (msg.startsWith('INVALID_GPS_COORDINATES:')) return res.status(400).json({ code: 'INVALID_GPS_COORDINATES', message: msg.replace('INVALID_GPS_COORDINATES: ', '') });
+    if (msg.startsWith('ORGANIZATION_MISMATCH:')) return res.status(403).json({ code: 'ORGANIZATION_MISMATCH', message: msg.replace('ORGANIZATION_MISMATCH: ', '') });
+
+    if (msg.includes('Duplicate check-in')) return res.status(409).json({ error: msg });
+    if (msg.includes('Geofence error') || msg.includes('GPS accuracy')) return res.status(403).json({ error: msg });
+    
+    return res.status(400).json({ error: msg });
   }
 });
 

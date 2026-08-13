@@ -271,10 +271,9 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ userRole }) => {
         } else {
           setGpsError('Unable to retrieve current location fix: ' + err.message);
         }
-        // Set fallback coordinates for demonstration/testing if blocked in iFrame
-        const fallback = { latitude: 28.6209, longitude: 77.1363, accuracy: 10 };
-        setCurrentCoords(fallback);
-        setCalculatedDistance(0);
+        // Removed fallback coordinates to strictly enforce actual GPS usage
+        setCurrentCoords(null);
+        setCalculatedDistance(null);
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );

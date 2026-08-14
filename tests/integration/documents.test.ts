@@ -19,14 +19,14 @@ process.env.JWT_SECRET = 'test-jwt-secret-for-testing-purposes-only-not-producti
 const TEST_JWT_SECRET = process.env.JWT_SECRET;
 const app = createTestApp();
 
-function makeToken(role: string = 'EMPLOYEE') {
+function makeToken(role: string = 'EMPLOYEE', userId: string = '00000000-0000-4000-a000-000000000001', empId: string = '00000000-0000-4000-a000-000000000002') {
   return jwt.sign(
     {
-      userId: 'doc-test-user',
-      organizationId: 'doc-test-org',
+      userId,
+      organizationId: '00000000-0000-4000-a000-000000000000',
       email: 'doctest@test.com',
       role,
-      employeeId: 'doc-test-emp',
+      employeeId: empId,
       employeeName: 'Doc Test User',
     },
     TEST_JWT_SECRET,
@@ -136,16 +136,16 @@ describe('Document Security — Upload Validation', () => {
 });
 
 describe('Document Security — Download Authorization', () => {
-  it('should reject unauthenticated download', async () => {
+  it('should return 401 for unauthenticated document download', async () => {
     const res = await request(app)
-      .get('/api/documents/some-doc-id/download');
+      .get('/api/documents/00000000-0000-4000-a000-000000000005/download');
 
     expect(res.status).toBe(401);
   });
 
   it('should return 404 for non-existent document download', async () => {
     const res = await request(app)
-      .get('/api/documents/completely-nonexistent-doc-id/download')
+      .get('/api/documents/00000000-0000-4000-a000-000000000006/download')
       .set('Authorization', `Bearer ${hrToken}`);
 
     expect([404, 500]).toContain(res.status);
@@ -154,7 +154,7 @@ describe('Document Security — Download Authorization', () => {
   it('should deny employee access to another employee document', async () => {
     // Employee token with specific employeeId
     const emp1Token = jwt.sign(
-      { userId: 'emp1-user', organizationId: 'test-org', email: 'emp1@test.com', role: 'EMPLOYEE', employeeId: 'employee-one', employeeName: 'Emp One' },
+      { userId: '00000000-0000-4000-a000-000000000003', organizationId: '00000000-0000-4000-a000-000000000000', email: 'emp1@test.com', role: 'EMPLOYEE', employeeId: '00000000-0000-4000-a000-000000000004', employeeName: 'Emp One' },
       TEST_JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -162,7 +162,7 @@ describe('Document Security — Download Authorization', () => {
     // Try to access a document — with PGlite this returns 404 (no data)
     // In production, it would return 403 if doc belongs to different employee
     const res = await request(app)
-      .get('/api/documents/some-other-employees-doc/download')
+      .get('/api/documents/00000000-0000-4000-a000-000000000007/download')
       .set('Authorization', `Bearer ${emp1Token}`);
 
     expect([403, 404, 500]).toContain(res.status);
@@ -182,7 +182,7 @@ describe('Document Security — List Access Control', () => {
       if (Array.isArray(data)) {
         // Any returned documents must belong to this employee only
         const foreignDocs = data.filter((d: any) =>
-          d.employeeId && d.employeeId !== 'doc-test-emp'
+          d.employeeId && d.employeeId !== '00000000-0000-4000-a000-000000000002'
         );
         expect(foreignDocs).toHaveLength(0);
       }

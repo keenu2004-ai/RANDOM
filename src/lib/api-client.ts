@@ -33,11 +33,17 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Use VITE_API_URL from environment variables for absolute URLs in production/development,
-  // falling back to relative paths for local development if not set.
+  // Resolve absolute backend URL for production or default to local '/api'
   // @ts-ignore
-  const baseUrl = import.meta.env.VITE_API_URL || '/api';
-  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+  const rawApiUrl = import.meta.env.VITE_API_URL;
+  let baseUrl = '/api';
+  if (rawApiUrl) {
+    // If VITE_API_URL is set (e.g. https://random-ehwm.onrender.com), ensure it ends with /api
+    const trimmed = rawApiUrl.replace(/\/+$/, '');
+    baseUrl = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  }
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
 
   const response = await fetch(url, {
     ...options,

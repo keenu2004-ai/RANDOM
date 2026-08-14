@@ -37,7 +37,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: theiakshi-hrms-backend
-          property: host
+        value: https://random-ehwm.onrender.com

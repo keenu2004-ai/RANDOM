@@ -81,6 +81,19 @@ export class UserRepository {
       status: row.status
     };
   }
+
+  async findEmployeeByUserId(userId: string): Promise<any | null> {
+    const row = await queryOne<any>(`SELECT * FROM employees WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1`, [userId]);
+    if (!row) return null;
+    return {
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      employeeCode: row.employee_code,
+      departmentId: row.department_id,
+      status: row.status
+    };
+  }
 }
 
 export const userRepository = new UserRepository();

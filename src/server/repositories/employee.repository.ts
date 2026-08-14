@@ -83,11 +83,24 @@ export class EmployeeRepository {
   async createBranch(organizationId: string, data: any, actorUserId?: string, ipAddress?: string, requestId?: string) {
     const client = await beginTransaction();
     try {
+      const addressLine = data.addressLine || data.address || '';
+      const pincode = data.pincode || '000000';
       const res = await client.queryOne(`
-        INSERT INTO branches (organization_id, name, code, address, city, state, country, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO branches (organization_id, name, code, address_line, city, state, country, pincode, is_headquarters, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
-      `, [organizationId, data.name, data.code || data.name.slice(0, 3).toUpperCase(), data.address || '', data.city || '', data.state || '', data.country || 'India', data.isActive !== false]);
+      `, [
+        organizationId,
+        data.name,
+        data.code || data.name.slice(0, 3).toUpperCase(),
+        addressLine,
+        data.city || '',
+        data.state || '',
+        data.country || 'India',
+        pincode,
+        data.isHeadquarters || false,
+        data.isActive !== false
+      ]);
       await logMasterDataChangeTx(client, { organizationId, actorUserId: actorUserId || null, action: 'CREATE_BRANCH', entityType: 'BRANCH' as any, entityId: res.id, oldValues: null, newValues: res, ipAddress, requestId });
       await client.commit();
       return res;
@@ -102,10 +115,15 @@ export class EmployeeRepository {
       const fields: string[] = []; const values: any[] = []; let idx = 1;
       if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
       if (data.code !== undefined) { fields.push(`code = $${idx++}`); values.push(data.code); }
-      if (data.address !== undefined) { fields.push(`address = $${idx++}`); values.push(data.address); }
+      if (data.addressLine !== undefined || data.address !== undefined) {
+        fields.push(`address_line = $${idx++}`);
+        values.push(data.addressLine || data.address || '');
+      }
       if (data.city !== undefined) { fields.push(`city = $${idx++}`); values.push(data.city); }
       if (data.state !== undefined) { fields.push(`state = $${idx++}`); values.push(data.state); }
       if (data.country !== undefined) { fields.push(`country = $${idx++}`); values.push(data.country); }
+      if (data.pincode !== undefined) { fields.push(`pincode = $${idx++}`); values.push(data.pincode); }
+      if (data.isHeadquarters !== undefined) { fields.push(`is_headquarters = $${idx++}`); values.push(data.isHeadquarters); }
       if (data.isActive !== undefined) { fields.push(`is_active = $${idx++}`); values.push(data.isActive); }
       if (fields.length === 0) { await client.commit(); return old; }
       values.push(organizationId, id);

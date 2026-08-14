@@ -60,10 +60,26 @@ export async function authenticateToken(req: AuthenticatedRequest, res: Response
     return res.status(401).json({ error: 'Account is inactive or has been deleted' });
   }
 
+  let employeeId = payload.employeeId;
+  let employeeCode = payload.employeeCode;
+  let employeeName = payload.employeeName;
+
+  if (!employeeId) {
+    const empRow = await userRepository.findEmployeeByUserId(user.id);
+    if (empRow) {
+      employeeId = empRow.id;
+      employeeCode = empRow.employeeCode;
+      employeeName = `${empRow.firstName} ${empRow.lastName}`;
+    }
+  }
+
   req.user = {
     ...payload,
     organizationId: user.organizationId,
-    role: user.role
+    role: user.role,
+    employeeId: employeeId || user.employeeId,
+    employeeCode: employeeCode || payload.employeeCode,
+    employeeName: employeeName || payload.employeeName
   };
   next();
 }

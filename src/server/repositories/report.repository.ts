@@ -331,11 +331,13 @@ export class ReportRepository {
     if (!r) return {};
     return {
       id: r.id,
-      name: r.name,
-      domain: r.domain,
-      address: r.address,
-      contactEmail: r.contact_email,
-      contactPhone: r.contact_phone
+      orgName: r.name,
+      code: r.code,
+      website: r.website,
+      officeLatitude: r.office_latitude,
+      officeLongitude: r.office_longitude,
+      allowedGeofenceRadiusMeters: r.allowed_geofence_radius_meters,
+      enforceGpsCheckIn: r.enforce_gps_check_in
     };
   }
 
@@ -344,11 +346,15 @@ export class ReportRepository {
     const values: any[] = [];
     let idx = 1;
 
-    if (settings.name !== undefined) { updates.push(`name = $${idx++}`); values.push(settings.name); }
-    if (settings.domain !== undefined) { updates.push(`domain = $${idx++}`); values.push(settings.domain); }
-    if (settings.address !== undefined) { updates.push(`address = $${idx++}`); values.push(settings.address); }
-    if (settings.contactEmail !== undefined) { updates.push(`contact_email = $${idx++}`); values.push(settings.contactEmail); }
-    if (settings.contactPhone !== undefined) { updates.push(`contact_phone = $${idx++}`); values.push(settings.contactPhone); }
+    if (settings.orgName !== undefined || settings.name !== undefined) {
+      updates.push(`name = $${idx++}`);
+      values.push(settings.orgName || settings.name);
+    }
+    if (settings.website !== undefined) { updates.push(`website = $${idx++}`); values.push(settings.website); }
+    if (settings.officeLatitude !== undefined) { updates.push(`office_latitude = $${idx++}`); values.push(settings.officeLatitude); }
+    if (settings.officeLongitude !== undefined) { updates.push(`office_longitude = $${idx++}`); values.push(settings.officeLongitude); }
+    if (settings.allowedGeofenceRadiusMeters !== undefined) { updates.push(`allowed_geofence_radius_meters = $${idx++}`); values.push(settings.allowedGeofenceRadiusMeters); }
+    if (settings.enforceGpsCheckIn !== undefined) { updates.push(`enforce_gps_check_in = $${idx++}`); values.push(settings.enforceGpsCheckIn); }
 
     if (updates.length > 0) {
       values.push(orgId);

@@ -75,6 +75,11 @@ export async function initDatabase() {
       
       console.log(`PostgreSQL schema initialized successfully via ${provider}.`);
     }
+    
+    // Automatically trigger idempotent baseline master data initialization
+    const { initializeDatabaseBaseline } = await import('./baseline');
+    await initializeDatabaseBaseline();
+
     isInitialized = true;
   } catch (error) {
     console.error('Failed to initialize PostgreSQL schema:', error);

@@ -17,6 +17,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [resetStep, setResetStep] = useState<'REQUEST' | 'RESET'>('REQUEST');
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -50,6 +51,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     try {
       const res = await hrmsApi.forgotPassword(forgotEmail);
       setForgotSuccess(res.message);
+      // In test/development environment, the API returns the raw reset token
+      if (res._testOnlyToken) {
+        setResetToken(res._testOnlyToken);
+      }
       setResetStep('RESET');
     } catch (err: any) {
       setResetError(err.message);
@@ -61,13 +66,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     setForgotSuccess(null);
     setResetError(null);
     try {
-      const res = await hrmsApi.resetPassword({ email: forgotEmail, newPassword });
+      const res = await hrmsApi.resetPassword({ 
+        email: forgotEmail, 
+        newPassword,
+        token: resetToken 
+      });
       setForgotSuccess(res.message);
       setEmail(forgotEmail);
       setPassword(newPassword);
       setTimeout(() => {
         setShowForgot(false);
         setResetStep('REQUEST');
+        setResetToken('');
       }, 2000);
     } catch (err: any) {
       setResetError(err.message);

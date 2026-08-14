@@ -79,12 +79,12 @@ export const hrmsApi = {
   getMe: () => apiFetch<{ user: any }>('/auth/me'),
 
   forgotPassword: (email: string) =>
-    apiFetch<{ message: string; resetToken?: string }>('/auth/forgot-password', {
+    apiFetch<{ message: string; resetToken?: string; _testOnlyToken?: string }>('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
 
-  resetPassword: (data: { email: string; newPassword: string }) =>
+  resetPassword: (data: { email: string; newPassword: string; token?: string }) =>
     apiFetch<{ message: string }>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),

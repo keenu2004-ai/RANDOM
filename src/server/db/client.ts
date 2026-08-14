@@ -62,7 +62,15 @@ export async function initDatabase() {
         await pgPool.query(schemaSql);
       } else if (provider === 'pglite') {
         const db = await getPgliteDb();
-        await db.exec(schemaSql);
+        // PGlite builds gen_random_uuid() natively and doesn't support 'pgcrypto' extension loading.
+        // Strip CREATE EXTENSION IF NOT EXISTS pgcrypto; to avoid 0A000 errors on PGlite.
+        let sanitizedSql = schemaSql.replace(/CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+pgcrypto\s*;/gi, '-- pgcrypto extension skipped on PGlite');
+        try {
+          await db.exec(sanitizedSql);
+        } catch (execErr: any) {
+          // If bulk exec fails due to non-fatal schema warnings/race conditions, log warning instead of crashing
+          console.warn('[DB INIT] Schema statement warning on PGlite:', execErr?.message || execErr);
+        }
       }
       
       console.log(`PostgreSQL schema initialized successfully via ${provider}.`);

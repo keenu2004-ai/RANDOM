@@ -24,11 +24,31 @@ export class ReportRepository {
     // Leaves today
     const leavesToday = await queryOne(`SELECT COUNT(*) as count FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.organization_id = $1 AND l.start_date <= $${pLen} AND l.end_date >= $${pLen} AND l.status = 'APPROVED' ${empFilter}`, [...params, dateStr]);
 
+    // Additional stats for complete dashboard
+    const activeEmployees = await queryOne(`SELECT COUNT(*) as count FROM employees e WHERE e.organization_id = $1 AND e.deleted_at IS NULL AND e.status = 'ACTIVE' ${empFilter}`, params);
+    const lateToday = await queryOne(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE e.organization_id = $1 AND a.date = $${pLen} AND a.status = 'LATE' ${empFilter}`, [...params, dateStr]);
+    const pendingLeaveRequests = await queryOne(`SELECT COUNT(*) as count FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.organization_id = $1 AND l.status = 'PENDING' ${empFilter}`, params);
+    const pendingExpenseRequests = await queryOne(`SELECT COUNT(*) as count FROM expenses ex JOIN employees e ON ex.employee_id = e.id WHERE ex.organization_id = $1 AND ex.status = 'SUBMITTED' ${empFilter}`, params);
+    const upcomingHolidays = await query(`SELECT id, title as name, date, type, description FROM holidays WHERE organization_id = $1 AND date >= $2 AND date <= $3 ORDER BY date LIMIT 5`, [orgId, dateStr, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]]);
+    const organization = await queryOne(`SELECT id, name as orgName, office_latitude, office_longitude, allowed_geofence_radius_meters FROM organizations WHERE id = $1`, [orgId]);
+
     return {
       totalEmployees: parseInt(totalEmployees?.count || '0'),
+      activeEmployees: parseInt(activeEmployees?.count || '0'),
       presentToday: parseInt(presentToday?.count || '0'),
+      lateToday: parseInt(lateToday?.count || '0'),
       onLeaveToday: parseInt(leavesToday?.count || '0'),
       absentToday: parseInt(totalEmployees?.count || '0') - parseInt(presentToday?.count || '0') - parseInt(leavesToday?.count || '0'),
+      pendingLeaveRequests: parseInt(pendingLeaveRequests?.count || '0'),
+      pendingExpenseRequests: parseInt(pendingExpenseRequests?.count || '0'),
+      upcomingHolidays: upcomingHolidays || [],
+      organization: organization ? {
+        id: organization.id,
+        orgName: organization.orgName,
+        officeLatitude: organization.office_latitude,
+        officeLongitude: organization.office_longitude,
+        allowedGeofenceRadiusMeters: organization.allowed_geofence_radius_meters
+      } : null
     };
   }
 

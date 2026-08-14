@@ -177,14 +177,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onNavigateTa
 
           <div className="space-y-3 pt-2">
             {charts?.departmentDistribution?.map((dept: any, idx: number) => {
-              const max = Math.max(...charts.departmentDistribution.map((d: any) => d.count), 1);
-              const percentage = Math.round((dept.count / max) * 100);
+              const max = Math.max(...charts.departmentDistribution.map((d: any) => d.value || d.count || 0), 1);
+              const count = dept.value || dept.count || 0;
+              const percentage = Math.round((count / max) * 100);
 
               return (
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs font-medium text-slate-700">
                     <span>{dept.name}</span>
-                    <span className="font-bold text-slate-900">{dept.count} Employees</span>
+                    <span className="font-bold text-slate-900">{count} Employees</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                     <div

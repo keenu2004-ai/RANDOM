@@ -93,10 +93,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'attendance',
-      label: 'Attendance & GPS',
+      label: 'Attendance',
       icon: MapPin,
       roles: ['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER', 'EMPLOYEE'],
-      badge: 'GPS',
     },
     {
       id: 'leaves',
@@ -124,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'timesheets',
-      label: 'Timesheets',
+      label: 'Weekly Plan',
       icon: Clock,
       roles: ['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'MANAGER', 'EMPLOYEE'],
     },

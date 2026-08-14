@@ -353,10 +353,10 @@ export const TimesheetsView: React.FC<TimesheetsViewProps> = ({ userRole }) => {
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <Clock className="w-6 h-6 text-blue-600" />
-            <span>Timesheet & Project Tracker</span>
+            <span>Weekly Plan & Project Tracker</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Track project task hours, manage project access, and process team time logs
+            Track weekly project task hours, manage project access, and process team time logs
           </p>
         </div>
 

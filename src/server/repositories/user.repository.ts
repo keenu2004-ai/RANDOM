@@ -14,13 +14,16 @@ export interface UserRow {
 
 export class UserRepository {
   private mapRowToUser(row: UserRow): User {
+    if (!row.role) {
+      throw new Error(`User ${row.email} (${row.id}) has no valid role assigned in the database.`);
+    }
     return {
       id: row.id,
       organizationId: row.organization_id,
       email: row.email,
       passwordHash: row.password_hash,
       isActive: row.is_active,
-      role: row.role,
+      role: row.role as Role,
       employeeId: row.employee_id || undefined,
       createdAt: row.created_at,
       updatedAt: ''

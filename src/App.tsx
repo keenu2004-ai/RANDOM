@@ -46,8 +46,15 @@ export function App() {
     try {
       setLoading(true);
       const res = await hrmsApi.getMe();
-      setUser(res.user || res);
+      const loadedUser = res.user || res;
+      if (!loadedUser || !loadedUser.role) {
+        hrmsApi.logout();
+        setUser(null);
+      } else {
+        setUser(loadedUser);
+      }
     } catch (err) {
+      hrmsApi.logout();
       setUser(null);
     } finally {
       setLoading(false);

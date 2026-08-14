@@ -47,9 +47,8 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/me') {
+    if (response.status === 401 && endpoint !== '/auth/login') {
       removeStoredToken();
-      window.location.href = '/';
     }
     // 403 just throws the error below for components to handle
     throw new Error(data.error || `HTTP error ${response.status}`);
@@ -161,9 +160,18 @@ export const hrmsApi = {
     apiFetch<any>(`/expenses/categories/${id}`, { method: 'DELETE' }),
 
   // Employees
-  getEmployees: (params?: Record<string, string>) => {
+  getEmployees: async (params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
-    return apiFetch<any>(`/employees${query}`);
+    const res = await apiFetch<any>(`/employees${query}`);
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) {
+      // Return response object that also acts as array or exposes .data
+      const arr = res.data;
+      (arr as any).data = res.data;
+      (arr as any).pagination = res.pagination;
+      return arr;
+    }
+    return res || [];
   },
   getEmployee: (id: string) => apiFetch<any>(`/employees/${id}`),
   createEmployee: (data: any) =>

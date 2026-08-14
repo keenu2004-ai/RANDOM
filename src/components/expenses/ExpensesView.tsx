@@ -20,7 +20,7 @@ import {
   Filter,
   FileCheck
 } from 'lucide-react';
-import { hrmsApi, getStoredToken } from '../../lib/api-client';
+import { hrmsApi, getStoredToken, getApiUrl } from '../../lib/api-client';
 import { Expense, ExpenseCategory } from '../../types/hrms';
 
 interface ExpensesViewProps {
@@ -306,7 +306,8 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ userRole }) => {
   const handleViewReceipt = async (receiptUrl: string, title: string) => {
     try {
       const token = getStoredToken();
-      const res = await fetch(receiptUrl, {
+      const targetUrl = getApiUrl(receiptUrl);
+      const res = await fetch(targetUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

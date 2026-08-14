@@ -18,6 +18,24 @@ export function removeStoredToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+export function getApiUrl(path: string): string {
+  if (path.startsWith('http')) return path;
+  // @ts-ignore
+  const rawApiUrl = import.meta.env.VITE_API_URL;
+  let baseUrl = '/api';
+  if (rawApiUrl) {
+    const trimmed = rawApiUrl.replace(/\/+$/, '');
+    baseUrl = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  }
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  // Prevent duplicate /api prefix if cleanPath already begins with /api
+  if (baseUrl.endsWith('/api') && cleanPath.startsWith('/api/')) {
+    const origin = baseUrl.substring(0, baseUrl.length - 4);
+    return `${origin}${cleanPath}`;
+  }
+  return `${baseUrl}${cleanPath}`;
+}
+
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getStoredToken();
   const headers: any = {
@@ -28,22 +46,11 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     headers['Content-Type'] = 'application/json';
   }
 
-
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Resolve absolute backend URL for production or default to local '/api'
-  // @ts-ignore
-  const rawApiUrl = import.meta.env.VITE_API_URL;
-  let baseUrl = '/api';
-  if (rawApiUrl) {
-    // If VITE_API_URL is set (e.g. https://random-ehwm.onrender.com), ensure it ends with /api
-    const trimmed = rawApiUrl.replace(/\/+$/, '');
-    baseUrl = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-  }
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
+  const url = getApiUrl(endpoint);
 
   const response = await fetch(url, {
     ...options,
@@ -690,7 +697,7 @@ export const hrmsApi = {
     const token = getStoredToken();
     const headers: any = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const response = await fetch(`/api/reports/export${query}`, { headers });
+    const response = await fetch(getApiUrl(`/reports/export${query}`), { headers });
     if (!response.ok) throw new Error('Failed to export report');
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);

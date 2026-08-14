@@ -352,6 +352,10 @@ Source: [src/server/db/schema.sql](file:///c:/Users/Vaibhav/antigravity/New%20fo
 * **Stale Session & Role Resolution:**
   * When `GET /api/auth/me` fails or returns a user with missing/unassigned role, `App.tsx` and `api-client.ts` automatically invoke `hrmsApi.logout()` to clear stored JWT tokens from `localStorage` and return to the `LoginForm`.
   * `userRepository.mapRowToUser` strictly validates `row.role` from SQL `users LEFT JOIN user_roles LEFT JOIN roles` and throws an error if unassigned, NEVER defaulting or falling back to `ADMIN`.
+* **Administrative vs Employee Identity Architecture:**
+  * `ADMIN` & `SUPER_ADMIN`: Administrative accounts operate with `employeeId = undefined` cleanly. Self-service endpoints (`GET /leaves/balances`, `GET /attendance/today`) return empty data structures rather than HTTP 400 errors for unlinked admin accounts.
+  * `HR_MANAGER` & `MANAGER`: Access team and organizational workflows while utilizing linked `employeeId` when present (`EMP-001`).
+  * `EMPLOYEE`: Personal self-service endpoints strictly require a valid linked `employeeId` (`EMP-002`).
 
 ---
 

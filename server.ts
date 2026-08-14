@@ -66,6 +66,9 @@ const globalRateLimiter = rateLimit({
 async function startServer() {
   const app = express();
 
+  // Enable trust proxy for reverse proxies (Render) to fix express-rate-limit X-Forwarded-For warning
+  app.set('trust proxy', 1);
+
   // ============================================================
   // 1. Security Headers (Helmet)
   // ============================================================

@@ -227,7 +227,7 @@ export class ReportRepository {
 
   async getUsers(orgId: string) {
     const res = await query(`
-      SELECT u.*, e.first_name, e.last_name, e.employee_code, r.name as role, e.id as employee_id
+      SELECT u.id, u.organization_id, u.email, u.is_active, u.created_at, e.first_name, e.last_name, e.employee_code, r.name as role, e.id as employee_id
       FROM users u
       LEFT JOIN employees e ON e.user_id = u.id
       LEFT JOIN user_roles ur ON u.id = ur.user_id 
@@ -249,7 +249,7 @@ export class ReportRepository {
 
   async getUserById(orgId: string, userId: string) {
     const r = await queryOne(`
-      SELECT u.*, r.name as role, e.id as employee_id
+      SELECT u.id, u.organization_id, u.email, u.is_active, u.created_at, r.name as role, e.id as employee_id
       FROM users u
       LEFT JOIN employees e ON e.user_id = u.id
       LEFT JOIN user_roles ur ON u.id = ur.user_id 

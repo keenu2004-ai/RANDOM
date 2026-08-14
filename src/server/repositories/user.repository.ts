@@ -32,7 +32,7 @@ export class UserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const row = await queryOne<UserRow>(
-      `SELECT u.*, COALESCE(r.name, u.role) as role, e.id as employee_id 
+      `SELECT u.id, u.organization_id, u.email, u.password_hash, u.is_active, u.created_at, r.name as role, e.id as employee_id 
        FROM users u 
        LEFT JOIN user_roles ur ON u.id = ur.user_id 
        LEFT JOIN roles r ON ur.role_id = r.id 
@@ -45,7 +45,7 @@ export class UserRepository {
 
   async findById(id: string): Promise<User | null> {
     const row = await queryOne<UserRow>(
-      `SELECT u.*, COALESCE(r.name, u.role) as role, e.id as employee_id 
+      `SELECT u.id, u.organization_id, u.email, u.password_hash, u.is_active, u.created_at, r.name as role, e.id as employee_id 
        FROM users u 
        LEFT JOIN user_roles ur ON u.id = ur.user_id 
        LEFT JOIN roles r ON ur.role_id = r.id 

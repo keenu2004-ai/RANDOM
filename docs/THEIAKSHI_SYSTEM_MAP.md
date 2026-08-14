@@ -342,13 +342,16 @@ Source: [src/server/db/schema.sql](file:///c:/Users/Vaibhav/antigravity/New%20fo
 
 ---
 
-## 8. PRODUCTION AUTHENTICATION & TROUBLESHOOTING MAP
+## 8. PRODUCTION RENDER ARCHITECTURE & TROUBLESHOOTING MAP
 
+* **Render Production Stack & Exact URLs:**
+  * **Frontend Static Site:** `https://random-1-d9vw.onrender.com` (Render Static Site serving `./dist` with SPA rewrite route `/* -> /index.html`).
+  * **Backend Web Service:** `https://random-ehwm.onrender.com` (Render Web Service running `npm start` on `0.0.0.0:$PORT` with health check at `/api/health`).
+  * **Build Variable:** `VITE_API_URL=https://random-ehwm.onrender.com`
+  * **CORS Policy:** `server.ts` explicitly allows `https://random-1-d9vw.onrender.com` and all `*.onrender.com` origins dynamically alongside `CORS_ALLOWED_ORIGINS`.
 * **Stale Session & Role Resolution:**
   * When `GET /api/auth/me` fails or returns a user with missing/unassigned role, `App.tsx` and `api-client.ts` automatically invoke `hrmsApi.logout()` to clear stored JWT tokens from `localStorage` and return to the `LoginForm`.
   * `userRepository.mapRowToUser` strictly validates `row.role` from SQL `users LEFT JOIN user_roles LEFT JOIN roles` and throws an error if unassigned, NEVER defaulting or falling back to `ADMIN`.
-* **405 Method Not Allowed Prevention:**
-  * Ensure production Vercel `VITE_API_URL` environment variable points to the remote backend (`https://random-ehwm.onrender.com`) so POST requests to `/api/auth/login` reach Express router instead of static Vercel frontend asset handlers.
 
 ---
 

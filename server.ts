@@ -41,7 +41,7 @@ const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, health checks)
     if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) {
+    if (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.onrender.com')) {
       return callback(null, true);
     }
     return callback(new Error(`CORS: Origin '${origin}' not allowed.`), false);

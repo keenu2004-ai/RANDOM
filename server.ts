@@ -34,14 +34,15 @@ if (isProd) {
 // CORS Configuration
 // ============================================================
 const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/+$/, ''))
   : ['http://localhost:3000', 'http://localhost:5173', 'https://random-1-d9vw.onrender.com'];
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, health checks)
     if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) {
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    if (ALLOWED_ORIGINS.includes(cleanOrigin)) {
       return callback(null, true);
     }
     return callback(new Error(`CORS: Origin '${origin}' not allowed.`), false);

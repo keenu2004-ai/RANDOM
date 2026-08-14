@@ -52,10 +52,18 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
   const url = getApiUrl(endpoint);
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err: any) {
+    if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+      throw new Error('Unable to connect to production API server. The backend server may be waking up or CORS origin mismatch occurred.');
+    }
+    throw err;
+  }
 
   const data = await response.json().catch(() => ({}));
 

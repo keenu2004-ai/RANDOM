@@ -15,7 +15,17 @@ attendanceRealGpsGeofencingRouter.get('/attendance', authenticateToken, async (r
 
 attendanceRealGpsGeofencingRouter.get('/attendance/today', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const empId = req.user!.employeeId!;
+    const empId = req.user!.employeeId;
+    if (!empId) {
+      return res.json({ 
+        date: new Date().toISOString().split('T')[0], 
+        record: null, 
+        isCheckedIn: false, 
+        isCheckedOut: false, 
+        onBreak: false, 
+        shift: null 
+      });
+    }
     const record = await attendanceRepository.getAttendanceRecordForToday(req.user!.organizationId, empId);
     const shift = await attendanceRepository.getShift(empId);
 

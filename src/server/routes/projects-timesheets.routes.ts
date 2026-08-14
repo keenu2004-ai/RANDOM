@@ -103,6 +103,10 @@ projectsTimesheetsRouter.get('/timesheets', authenticateToken, async (req: Authe
 // Log / Create Timesheet Entry
 projectsTimesheetsRouter.post('/timesheets', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const empId = req.user!.employeeId;
+    if (!empId) {
+      return res.status(400).json({ error: 'Personal timesheet entries require a linked Employee profile.' });
+    }
     const { date, projectId, projectName, taskDescription, hours, status } = req.body;
 
     if (!date || (!projectId && !projectName) || hours === undefined) {

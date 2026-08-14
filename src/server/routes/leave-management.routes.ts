@@ -95,7 +95,13 @@ leaveManagementRouter.get('/leaves', authenticateToken, async (req: Authenticate
 // Get Leave Balances for an Employee
 leaveManagementRouter.get('/leaves/balances', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const empId = (req.query.employeeId as string) || req.user!.employeeId;
-  if (!empId) return res.status(400).json({ error: 'Employee ID required' });
+  if (!empId) {
+    // If administrative user has no linked employee profile and didn't specify employeeId parameter, return empty array
+    if (['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER'].includes(req.user!.role)) {
+      return res.json([]);
+    }
+    return res.status(400).json({ error: 'Employee ID required' });
+  }
   
   if (req.user!.role === 'EMPLOYEE' && empId !== req.user!.employeeId) {
     return res.status(403).json({ error: 'Access Denied: You can only view your own leave balances.' });
